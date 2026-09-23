@@ -16,6 +16,9 @@ import {
   AlertCircle,
   Users,
   FileText,
+  Filter,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 interface IFarmer {
@@ -229,6 +232,8 @@ export default function FarmersPage() {
   const [farmers, setFarmers] = useState<IFarmer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [filtersMinimized, setFiltersMinimized] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editFarmer, setEditFarmer] = useState<IFarmer | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -250,11 +255,22 @@ export default function FarmersPage() {
 
   useEffect(() => { fetchFarmers(); }, []);
 
-  const filtered = farmers.filter(
-    (f) =>
+  const activeCount = farmers.filter((f) => f.isActive).length;
+  const inactiveCount = farmers.length - activeCount;
+
+  const filtered = farmers.filter((f) => {
+    const matchesSearch =
       f.name.toLowerCase().includes(search.toLowerCase()) ||
-      f.farmerCode.toLowerCase().includes(search.toLowerCase())
-  );
+      f.farmerCode.toLowerCase().includes(search.toLowerCase()) ||
+      (f.phone && f.phone.includes(search));
+    const matchesStatus =
+      statusFilter === 'all'
+        ? true
+        : statusFilter === 'active'
+        ? f.isActive
+        : !f.isActive;
+    return matchesSearch && matchesStatus;
+  });
 
   const handleDelete = async (farmer: IFarmer) => {
     if (!window.confirm(`Delete farmer "${farmer.name}"? This cannot be undone.`)) return;
@@ -302,19 +318,112 @@ export default function FarmersPage() {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name or code…"
-          className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-        />
-        {search && (
-          <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-            <X className="w-4 h-4" />
+      {/* Search & Filters Toolbar (Collapsible / Minimizable) */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+        {/* Header Bar with quick status and Minimize/Expand toggle */}
+        <div className="flex items-center justify-between px-3 py-2 bg-slate-50/80 border-b border-slate-100">
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+              <Filter className="w-3.5 h-3.5 text-slate-500" />
+              <span>खोज तथा फिल्टर (Filters)</span>
+            </div>
+            {/* Active summary badges */}
+            <span className="text-[11px] font-semibold text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
+              स्थिति: <strong className="text-slate-900 capitalize">{statusFilter === 'all' ? 'सबै' : statusFilter === 'active' ? 'सक्रिय' : 'निष्क्रिय'}</strong>
+            </span>
+            {search && (
+              <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md truncate max-w-[130px]">
+                &quot;{search}&quot;
+              </span>
+            )}
+            <span className="text-[11px] font-mono text-slate-500">
+              ({filtered.length}/{farmers.length})
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setFiltersMinimized((prev) => !prev)}
+            className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition cursor-pointer flex-shrink-0"
+            title={filtersMinimized ? 'फिल्टर खोल्नुहोस् (Expand Filters)' : 'फिल्टर लुकाउनुहोस् (Minimize Filters)'}
+          >
+            {filtersMinimized ? (
+              <>
+                <span>Expand</span>
+                <ChevronDown className="w-3.5 h-3.5" />
+              </>
+            ) : (
+              <>
+                <span>Minimize</span>
+                <ChevronUp className="w-3.5 h-3.5" />
+              </>
+            )}
           </button>
+        </div>
+
+        {/* Expandable Filter Controls */}
+        {!filtersMinimized && (
+          <div className="p-2.5 sm:p-3.5 space-y-2.5">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+              {/* Search Box */}
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search by name, code or phone…"
+                  className="w-full pl-9 pr-9 py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white text-xs sm:text-sm font-medium text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-full"
+                    title="Clear search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Status Filter Tabs: All, Active, Inactive */}
+              <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('all')}
+                  className={`py-1 px-2.5 text-xs font-bold rounded-lg text-center transition-all ${
+                    statusFilter === 'all'
+                      ? 'bg-white text-slate-900 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  All ({farmers.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('active')}
+                  className={`py-1 px-2.5 text-xs font-bold rounded-lg text-center transition-all ${
+                    statusFilter === 'active'
+                      ? 'bg-emerald-600 text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Active ({activeCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('inactive')}
+                  className={`py-1 px-2.5 text-xs font-bold rounded-lg text-center transition-all ${
+                    statusFilter === 'inactive'
+                      ? 'bg-slate-700 text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Inactive ({inactiveCount})
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
 
