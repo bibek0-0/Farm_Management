@@ -850,7 +850,7 @@ export default function OnePageGridEntry() {
   const pendingCount = farmers.length - farmersEntered;
 
   return (
-    <div className="space-y-3 sm:space-y-4 max-w-6xl pb-28 sm:pb-8">
+    <div className="space-y-3 max-w-4xl mx-auto pb-24 sm:pb-8">
       {/* MODE SWITCHER: दूध संकलन (Collection) vs दूध बिक्री (Sell Milk) */}
       {/* MODE SWITCHER: दूध संकलन (Collection) vs दूध बिक्री (Sell Milk) */}
       <div className="bg-white p-1.5 sm:p-2 rounded-2xl border border-slate-200 shadow-2xs w-full max-w-full">
@@ -1183,24 +1183,24 @@ export default function OnePageGridEntry() {
                 return (
                   <div
                     key={`mobile-${farmer._id}`}
-                    className={`p-3.5 sm:p-4 transition-colors ${
+                    className={`p-2.5 sm:p-3 transition-colors ${
                       hasQty
-                        ? 'bg-green-50/70 border-l-4 border-l-green-500'
+                        ? 'bg-green-50/70 border-l-[3px] border-l-green-500'
                         : hasEntry
-                        ? 'bg-amber-50/30 border-l-4 border-l-amber-400'
+                        ? 'bg-amber-50/30 border-l-[3px] border-l-amber-400'
                         : 'bg-white'
                     }`}
                   >
                     {/* Header Row: Farmer Code, Name, Amount/Rate Status */}
-                    <div className="flex items-center justify-between gap-2 mb-2.5">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-[11px] font-mono text-slate-400 font-bold">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-[10px] font-mono text-slate-400 font-bold">
                           #{overallIdx >= 0 ? overallIdx + 1 : filteredIdx + 1}
                         </span>
-                        <span className="inline-block bg-slate-100 text-slate-800 font-mono font-black text-xs px-2 py-0.5 rounded-md border border-slate-200">
+                        <span className="inline-block bg-slate-100 text-slate-800 font-mono font-bold text-xs px-1.5 py-0.5 rounded border border-slate-200">
                           {farmer.farmerCode}
                         </span>
-                        <span className="font-bold text-slate-900 text-sm truncate">
+                        <span className="font-semibold text-slate-900 text-xs sm:text-sm truncate">
                           {farmer.name}
                         </span>
                       </div>
@@ -1208,15 +1208,15 @@ export default function OnePageGridEntry() {
                       {/* Status / Rate Display */}
                       <div className="text-right flex-shrink-0">
                         {savingFarmerIds.has(farmer._id) ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-mono animate-pulse">
-                            <Loader2 className="w-3 h-3 animate-spin text-amber-600" /> बचत हुँदैछ...
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full font-mono animate-pulse">
+                            <Loader2 className="w-2.5 h-2.5 animate-spin text-amber-600" /> बचत...
                           </span>
                         ) : isQualityMode && hasQty ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-black text-green-700 bg-green-100/90 border border-green-200 px-2 py-0.5 rounded-full font-mono">
-                            <Check className="w-3 h-3 stroke-[3]" /> {formatRs(amount)}
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-green-700 bg-green-100/90 border border-green-200 px-2 py-0.5 rounded-full font-mono">
+                            <Check className="w-2.5 h-2.5 stroke-[3]" /> {formatRs(amount)}
                           </span>
                         ) : (
-                          <span className="text-xs font-mono font-semibold text-slate-500">
+                          <span className="text-[11px] font-mono font-semibold text-slate-500">
                             दर: Rs. {effectiveRate.toFixed(2)}/L
                           </span>
                         )}
@@ -1225,7 +1225,7 @@ export default function OnePageGridEntry() {
 
                     {/* Inputs Row: Liters + Quality Mode inputs */}
                     <div className="grid grid-cols-12 gap-2 items-center">
-                      {/* Liters Input - Big, Easy Touch Target for Thumb */}
+                      {/* Liters Input - Medium Touch Target */}
                       <div className={isQualityMode ? 'col-span-6' : 'col-span-7'}>
                         <div className="relative">
                           <input
@@ -1254,14 +1254,14 @@ export default function OnePageGridEntry() {
                                 }
                               }
                             }}
-                            className={`w-full text-xl font-black h-12 pl-3.5 pr-8 border-2 rounded-xl focus:outline-none transition-all ${
+                            className={`w-full text-base font-bold h-10 pl-3 pr-7 border rounded-lg focus:outline-none transition-all ${
                               hasQty
-                                ? 'border-green-600 bg-white text-green-950 ring-2 ring-green-100 shadow-2xs'
-                                : 'border-slate-300 bg-white text-slate-900 focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                ? 'border-green-600 bg-white text-green-950 ring-1 ring-green-100 shadow-2xs'
+                                : 'border-slate-300 bg-white text-slate-900 focus:border-green-500 focus:ring-1 focus:ring-green-100'
                             }`}
                           />
-                          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                            <span className={`text-xs font-black font-mono transition-colors ${hasQty ? 'text-green-700' : 'text-slate-400'}`}>
+                          <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
+                            <span className={`text-[11px] font-bold font-mono transition-colors ${hasQty ? 'text-green-700' : 'text-slate-400'}`}>
                               L
                             </span>
                           </div>
@@ -1287,9 +1287,9 @@ export default function OnePageGridEntry() {
                                 onChange={(e) => handleFatChange(farmer, e.target.value)}
                                 onFocus={(e) => e.target.select()}
                                 onBlur={() => saveSingleFarmer(farmer._id)}
-                                className={`w-full text-center font-mono font-bold text-xs h-12 px-1 border-2 rounded-xl focus:outline-none transition-all ${
+                                className={`w-full text-center font-mono font-bold text-xs h-10 px-1 border rounded-lg focus:outline-none transition-all ${
                                   row.fat
-                                    ? 'border-amber-500 bg-amber-50/60 text-amber-950 font-black ring-1 ring-amber-200'
+                                    ? 'border-amber-500 bg-amber-50/60 text-amber-950 font-bold ring-1 ring-amber-200'
                                     : 'border-slate-200 bg-slate-50 text-slate-700 focus:bg-white focus:border-amber-500'
                                 }`}
                               />
@@ -1311,9 +1311,9 @@ export default function OnePageGridEntry() {
                                 onChange={(e) => handleSnfChange(farmer, e.target.value)}
                                 onFocus={(e) => e.target.select()}
                                 onBlur={() => saveSingleFarmer(farmer._id)}
-                                className={`w-full text-center font-mono font-bold text-xs h-12 px-1 border-2 rounded-xl focus:outline-none transition-all ${
+                                className={`w-full text-center font-mono font-bold text-xs h-10 px-1 border rounded-lg focus:outline-none transition-all ${
                                   row.snf
-                                    ? 'border-indigo-500 bg-indigo-50/60 text-indigo-950 font-black ring-1 ring-indigo-200'
+                                    ? 'border-indigo-500 bg-indigo-50/60 text-indigo-950 font-bold ring-1 ring-indigo-200'
                                     : 'border-slate-200 bg-slate-50 text-slate-700 focus:bg-white focus:border-indigo-500'
                                 }`}
                               />
@@ -1326,15 +1326,15 @@ export default function OnePageGridEntry() {
                           <div className="text-right">
                             {hasQty ? (
                               <div>
-                                <div className="text-sm font-black font-mono text-green-700 leading-tight">
+                                <div className="text-xs sm:text-sm font-bold font-mono text-green-700 leading-tight">
                                   {formatRs(amount)}
                                 </div>
-                                <div className="text-[10px] text-green-600 font-bold flex items-center justify-end gap-0.5 mt-0.5">
-                                  <Check className="w-3 h-3 stroke-[3]" /> भरियो
+                                <div className="text-[9px] text-green-600 font-bold flex items-center justify-end gap-0.5 mt-0.5">
+                                  <Check className="w-2.5 h-2.5 stroke-[3]" /> भरियो
                                 </div>
                               </div>
                             ) : (
-                              <div className="text-xs font-mono font-semibold text-slate-400">
+                              <div className="text-[11px] font-mono font-medium text-slate-400">
                                 Rs. 0.00
                               </div>
                             )}
@@ -1347,42 +1347,42 @@ export default function OnePageGridEntry() {
               })}
             </div>
 
-            {/* 2. DESKTOP VIEW (>= md): Full Grid Table with Sticky Header */}
+            {/* 2. DESKTOP VIEW (>= md): Clean Medium-Sized Grid Table with Sticky Header */}
             <div className="hidden md:block overflow-x-auto max-h-[calc(100vh-270px)] overflow-y-auto relative">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left border-collapse text-xs">
                 {/* STICKY TABLE HEADER */}
                 <thead className="sticky top-0 bg-slate-100/95 backdrop-blur-xs border-b border-slate-200 shadow-2xs z-10">
-                  <tr className="text-slate-600 text-xs uppercase tracking-wider">
-                    <th className="py-3 px-3 w-12 text-center font-bold">#</th>
-                    <th className="py-3 px-3 w-28 font-bold">Farmer ID</th>
-                    <th className="py-3 px-3 font-bold">Farmer Name</th>
-                    <th className="py-3 px-3 w-40 font-bold text-green-800">
+                  <tr className="text-slate-600 text-[11px] uppercase tracking-wider font-bold">
+                    <th className="py-2 px-2.5 w-10 text-center">#</th>
+                    <th className="py-2 px-2.5 w-24">Farmer ID</th>
+                    <th className="py-2 px-2.5 min-w-[130px]">Farmer Name</th>
+                    <th className="py-2 px-2.5 w-32 text-green-800">
                       Liters (L)
                     </th>
 
                     {/* Quality Mode Columns */}
                     {isQualityMode ? (
                       <>
-                        <th className="py-3 px-2.5 w-24 font-bold text-amber-800 text-center">
+                        <th className="py-2 px-2 w-20 text-amber-800 text-center">
                           FAT %
                         </th>
-                        <th className="py-3 px-2.5 w-24 font-bold text-indigo-800 text-center">
+                        <th className="py-2 px-2 w-20 text-indigo-800 text-center">
                           SNF %
                         </th>
-                        <th className="py-3 px-3 w-28 font-bold text-slate-600 text-center">
+                        <th className="py-2 px-2 w-24 text-slate-600 text-center">
                           Rate (Rs/L)
                         </th>
                       </>
                     ) : (
-                      <th className="py-3 px-4 w-32 font-bold text-slate-500">
+                      <th className="py-2 px-2.5 w-24 text-slate-500">
                         Rate (Rs/L)
                       </th>
                     )}
 
-                    <th className="py-3 px-4 w-36 font-bold text-right">Amount (Rs)</th>
+                    <th className="py-2 px-3 w-28 text-right">Amount (Rs)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
+                <tbody className="divide-y divide-slate-100">
                   {filteredFarmers.map((farmer, filteredIdx) => {
                     const row = entries[farmer._id] ?? {
                       quantity: '',
@@ -1413,31 +1413,31 @@ export default function OnePageGridEntry() {
                         }`}
                       >
                         {/* Row # */}
-                        <td className="py-2.5 px-3 text-center font-mono text-xs text-slate-400 font-semibold">
+                        <td className="py-1.5 px-2.5 text-center font-mono text-[11px] text-slate-400 font-medium">
                           {overallIdx >= 0 ? overallIdx + 1 : filteredIdx + 1}
                         </td>
 
                         {/* Farmer ID / Code Badge */}
-                        <td className="py-2.5 px-3 font-mono font-bold text-slate-700">
-                          <span className="inline-block bg-slate-100 text-slate-800 border border-slate-200 px-2 py-0.5 rounded-md text-xs font-black shadow-2xs">
+                        <td className="py-1.5 px-2.5 font-mono">
+                          <span className="inline-block bg-slate-100 text-slate-800 border border-slate-200 px-1.5 py-0.5 rounded text-[11px] font-bold shadow-2xs">
                             {farmer.farmerCode}
                           </span>
                         </td>
 
                         {/* Farmer Name (Clean, NO phone number) */}
-                        <td className="py-2.5 px-3">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-900 text-sm">{farmer.name}</span>
+                        <td className="py-1.5 px-2.5">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="font-semibold text-slate-900 text-xs sm:text-sm truncate">{farmer.name}</span>
                             {savingFarmerIds.has(farmer._id) ? (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.2 rounded-full animate-pulse">
-                                <Loader2 className="w-2.5 h-2.5 animate-spin" /> बचत हुँदैछ
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-1 py-0.2 rounded-full animate-pulse flex-shrink-0">
+                                <Loader2 className="w-2 h-2 animate-spin" /> बचत
                               </span>
                             ) : hasQty ? (
-                              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-green-700 bg-green-100 border border-green-200 px-1.5 py-0.2 rounded-full">
-                                <Check className="w-2.5 h-2.5 stroke-[3]" /> saved
+                              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-green-700 bg-green-100 border border-green-200 px-1 py-0.2 rounded-full flex-shrink-0">
+                                <Check className="w-2 h-2 stroke-[3]" /> saved
                               </span>
                             ) : hasEntry ? (
-                              <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.2 rounded-full">
+                              <span className="text-[9px] font-semibold text-amber-700 bg-amber-100 border border-amber-200 px-1 py-0.2 rounded-full flex-shrink-0">
                                 saved
                               </span>
                             ) : null}
@@ -1445,7 +1445,7 @@ export default function OnePageGridEntry() {
                         </td>
 
                         {/* Liters Input Box */}
-                        <td className="py-1.5 px-3">
+                        <td className="py-1 px-2.5">
                           <div className="relative">
                             <input
                               type="number"
@@ -1496,14 +1496,14 @@ export default function OnePageGridEntry() {
                                   }
                                 }
                               }}
-                              className={`w-full text-base font-bold pl-3 pr-7 py-1.5 border-2 rounded-xl focus:outline-none transition-all ${
+                              className={`w-full text-xs sm:text-sm font-bold pl-2.5 pr-5 py-1 border rounded-lg focus:outline-none transition-all ${
                                 hasQty
-                                  ? 'border-green-600 bg-white text-green-950 shadow-sm ring-2 ring-green-100'
-                                  : 'border-slate-300 bg-white text-slate-900 hover:border-slate-400 focus:border-green-500 focus:ring-2 focus:ring-green-100'
+                                  ? 'border-green-600 bg-white text-green-950 shadow-2xs ring-1 ring-green-100'
+                                  : 'border-slate-300 bg-white text-slate-900 hover:border-slate-400 focus:border-green-500 focus:ring-1 focus:ring-green-100'
                               }`}
                             />
-                            <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
-                              <span className={`text-xs font-bold font-mono transition-colors ${hasQty ? 'text-green-700' : 'text-slate-400'}`}>
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                              <span className={`text-[10px] font-bold font-mono transition-colors ${hasQty ? 'text-green-700' : 'text-slate-400'}`}>
                                 L
                               </span>
                             </div>
@@ -1514,7 +1514,7 @@ export default function OnePageGridEntry() {
                         {isQualityMode ? (
                           <>
                             {/* FAT % Input */}
-                            <td className="py-1.5 px-2 text-center">
+                            <td className="py-1 px-1.5 text-center">
                               <div className="relative">
                                 <input
                                   type="number"
@@ -1537,7 +1537,7 @@ export default function OnePageGridEntry() {
                                       focusAndCenter(qtyRefs.current[farmer._id]);
                                     }
                                   }}
-                                  className={`w-full text-center font-mono font-bold text-xs sm:text-sm px-2 py-1.5 border rounded-lg focus:outline-none transition-all ${
+                                  className={`w-full text-center font-mono font-bold text-xs px-1.5 py-1 border rounded-md focus:outline-none transition-all ${
                                     row.fat
                                       ? 'border-amber-500 bg-amber-50/60 text-amber-950 font-black ring-1 ring-amber-200'
                                       : 'border-slate-200 bg-slate-50/50 text-slate-700 hover:border-slate-300 focus:bg-white focus:border-amber-500'
@@ -1547,7 +1547,7 @@ export default function OnePageGridEntry() {
                             </td>
 
                             {/* SNF % Input */}
-                            <td className="py-1.5 px-2 text-center">
+                            <td className="py-1 px-1.5 text-center">
                               <div className="relative">
                                 <input
                                   type="number"
@@ -1576,7 +1576,7 @@ export default function OnePageGridEntry() {
                                       fatRefs.current[farmer._id]?.select();
                                     }
                                   }}
-                                  className={`w-full text-center font-mono font-bold text-xs sm:text-sm px-2 py-1.5 border rounded-lg focus:outline-none transition-all ${
+                                  className={`w-full text-center font-mono font-bold text-xs px-1.5 py-1 border rounded-md focus:outline-none transition-all ${
                                     row.snf
                                       ? 'border-indigo-500 bg-indigo-50/60 text-indigo-950 font-black ring-1 ring-indigo-200'
                                       : 'border-slate-200 bg-slate-50/50 text-slate-700 hover:border-slate-300 focus:bg-white focus:border-indigo-500'
@@ -1586,7 +1586,7 @@ export default function OnePageGridEntry() {
                             </td>
 
                             {/* Calculated Rate Box with Testing Status Tag */}
-                            <td className="py-1.5 px-3 text-center font-mono">
+                            <td className="py-1 px-2 text-center font-mono">
                               <div className="flex flex-col items-center">
                                 <span
                                   className={`text-xs font-bold ${
@@ -1598,7 +1598,7 @@ export default function OnePageGridEntry() {
                                   Rs. {effectiveRate.toFixed(2)}
                                 </span>
                                 <span
-                                  className={`text-[10px] tracking-tight ${
+                                  className={`text-[9px] tracking-tight ${
                                     hasTestedQuality
                                       ? 'text-emerald-600 font-semibold'
                                       : 'text-slate-400'
@@ -1611,7 +1611,7 @@ export default function OnePageGridEntry() {
                           </>
                         ) : (
                           /* Standard Mode Rate Input */
-                          <td className="py-1.5 px-3">
+                          <td className="py-1 px-2.5">
                             <div className="relative">
                               <input
                                 type="number"
@@ -1624,19 +1624,19 @@ export default function OnePageGridEntry() {
                                 onFocus={(e) => e.target.select()}
                                 onBlur={() => saveSingleFarmer(farmer._id)}
                                 placeholder="0.00"
-                                className="w-full text-xs font-mono text-slate-600 px-2.5 py-1.5 border border-slate-200 bg-slate-50/50 rounded-lg hover:bg-white hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:outline-none transition"
+                                className="w-full text-xs font-mono text-slate-600 px-2 py-1 border border-slate-200 bg-slate-50/50 rounded-md hover:bg-white hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:outline-none transition"
                               />
                             </div>
                           </td>
                         )}
 
                         {/* Row Amount */}
-                        <td className="py-1.5 px-4 text-right font-mono">
+                        <td className="py-1 px-3 text-right font-mono">
                           <div className="flex items-center justify-end gap-1.5">
                             {savingFarmerIds.has(farmer._id) && (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600 flex-shrink-0" />
+                              <Loader2 className="w-3 h-3 animate-spin text-amber-600 flex-shrink-0" />
                             )}
-                            <span className={`font-bold text-sm ${hasQty ? 'text-green-700' : 'text-slate-300'}`}>
+                            <span className={`font-bold text-xs sm:text-sm ${hasQty ? 'text-green-700 font-black' : 'text-slate-300'}`}>
                               {hasQty ? formatRs(amount) : '—'}
                             </span>
                           </div>
