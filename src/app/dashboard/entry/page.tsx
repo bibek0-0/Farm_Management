@@ -105,7 +105,7 @@ export default function OnePageGridEntry() {
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'entered'>('all');
-  const [filtersMinimized, setFiltersMinimized] = useState(false);
+  const [filtersMinimized, setFiltersMinimized] = useState(true);
 
   // Entry Mode: 'collection' (दूध संकलन) vs 'sales' (दूध बिक्री)
   const [entryMode, setEntryMode] = useState<'collection' | 'sales'>('collection');
@@ -1001,24 +1001,67 @@ export default function OnePageGridEntry() {
 
       {entryMode === 'collection' ? (
         <>
-      {/* SEARCH BAR & STATUS FILTERS (MINIMIZABLE TOOLBAR) */}
+      {/* 1. INSTANT SEARCH BAR (ALWAYS VISIBLE OUTSIDE FILTER BAR) */}
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <Search className="w-4 h-4 text-slate-400" />
+        </div>
+        <input
+          ref={searchInputRef}
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setSearchQuery('');
+              searchInputRef.current?.blur();
+            } else if (e.key === 'Enter') {
+              e.preventDefault();
+              // Focus first matched farmer's input
+              if (filteredFarmers.length > 0) {
+                const firstFarmerId = filteredFarmers[0]._id;
+                focusAndCenter(qtyRefs.current[firstFarmerId]);
+              }
+            }
+          }}
+          placeholder="किसान खोज्नुहोस् वा कोड टाइप गर्नुहोस् (Search by ID or Name, e.g. '05', 'Ram')..."
+          className="w-full pl-9 pr-14 py-2 sm:py-2.5 bg-white hover:bg-slate-50/70 focus:bg-white text-xs sm:text-sm font-medium text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 shadow-2xs transition"
+        />
+        {/* Search Clear Icon */}
+        <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center gap-1">
+          {searchQuery ? (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                searchInputRef.current?.focus();
+              }}
+              className="p-1 text-slate-400 hover:text-slate-600 rounded-full cursor-pointer"
+              title="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          ) : (
+            <span className="hidden sm:inline text-[11px] font-mono text-slate-400 bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded shadow-2xs">
+              /
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* 2. COLLAPSIBLE FILTER BAR (MINIMIZED BY DEFAULT, ALL FILTER CHOSEN) */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         {/* Header Bar with quick status and Minimize/Expand toggle */}
         <div className="flex items-center justify-between px-3 py-2 bg-slate-50/80 border-b border-slate-100">
           <div className="flex items-center gap-2 flex-wrap min-w-0">
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
               <Filter className="w-3.5 h-3.5 text-slate-500" />
-              <span>खोज तथा फिल्टर (Filters)</span>
+              <span>स्थिति फिल्टर (Status Filters)</span>
             </div>
             {/* Active summary badges */}
             <span className="text-[11px] font-semibold text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
               स्थिति: <strong className="text-slate-900 capitalize">{statusFilter}</strong>
             </span>
-            {searchQuery && (
-              <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md truncate max-w-[130px]">
-                "{searchQuery}"
-              </span>
-            )}
             <span className="text-[11px] font-mono text-slate-500">
               ({filteredFarmers.length}/{farmers.length})
             </span>
@@ -1047,61 +1090,14 @@ export default function OnePageGridEntry() {
         {/* Expandable Filter Controls */}
         {!filtersMinimized && (
           <div className="p-2.5 sm:p-3.5 space-y-2.5">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-              {/* Instant Search Box */}
-              <div className="relative flex-1">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="w-4 h-4 text-slate-400" />
-                </div>
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
-                      setSearchQuery('');
-                      searchInputRef.current?.blur();
-                    } else if (e.key === 'Enter') {
-                      e.preventDefault();
-                      // Focus first matched farmer's input
-                      if (filteredFarmers.length > 0) {
-                        const firstFarmerId = filteredFarmers[0]._id;
-                        focusAndCenter(qtyRefs.current[firstFarmerId]);
-                      }
-                    }
-                  }}
-                  placeholder="Search by ID or Name (e.g. '05', 'Ram')..."
-                  className="w-full pl-9 pr-14 py-2 sm:py-2 bg-slate-50 hover:bg-slate-100/70 focus:bg-white text-xs sm:text-sm font-medium text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
-                />
-                {/* Search Clear Icon */}
-                <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center gap-1">
-                  {searchQuery ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSearchQuery('');
-                        searchInputRef.current?.focus();
-                      }}
-                      className="p-1 text-slate-400 hover:text-slate-600 rounded-full"
-                      title="Clear search"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  ) : (
-                    <span className="hidden sm:inline text-[11px] font-mono text-slate-400 bg-white border border-slate-200 px-1.5 py-0.5 rounded shadow-2xs">
-                      /
-                    </span>
-                  )}
-                </div>
-              </div>
-
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-xs font-semibold text-slate-600">इन्ट्री स्थिति (Entry Status):</span>
               {/* Status Filter Chips: All, Pending, Entered */}
               <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => setStatusFilter('all')}
-                  className={`py-1 px-2.5 text-xs font-bold rounded-lg text-center transition-all ${
+                  className={`py-1 px-2.5 text-xs font-bold rounded-lg text-center transition-all cursor-pointer ${
                     statusFilter === 'all'
                       ? 'bg-white text-slate-900 shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900'
@@ -1112,7 +1108,7 @@ export default function OnePageGridEntry() {
                 <button
                   type="button"
                   onClick={() => setStatusFilter('pending')}
-                  className={`py-1 px-2.5 text-xs font-bold rounded-lg text-center transition-all ${
+                  className={`py-1 px-2.5 text-xs font-bold rounded-lg text-center transition-all cursor-pointer ${
                     statusFilter === 'pending'
                       ? 'bg-amber-500 text-amber-950 shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900'
@@ -1123,7 +1119,7 @@ export default function OnePageGridEntry() {
                 <button
                   type="button"
                   onClick={() => setStatusFilter('entered')}
-                  className={`py-1 px-2.5 text-xs font-bold rounded-lg text-center transition-all ${
+                  className={`py-1 px-2.5 text-xs font-bold rounded-lg text-center transition-all cursor-pointer ${
                     statusFilter === 'entered'
                       ? 'bg-emerald-600 text-white shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900'
