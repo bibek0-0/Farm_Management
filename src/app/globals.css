@@ -35,6 +35,15 @@ textarea,
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Prevent iOS Safari / Android auto-zoom on input focus */
+@media screen and (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Safe-area inset utilities for notch / bottom bar on modern phones */
 .safe-area-pb {
   padding-bottom: env(safe-area-inset-bottom, 0px);

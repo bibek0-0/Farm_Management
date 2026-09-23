@@ -325,7 +325,7 @@ export default function FarmersPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="किसान खोज्नुहोस् (Search by name, code or phone)…"
-          className="w-full pl-9 pr-9 py-2 bg-white hover:bg-slate-50/70 focus:bg-white text-xs sm:text-sm font-medium text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 shadow-2xs transition"
+          className="w-full pl-9 pr-9 py-2 bg-white hover:bg-slate-50/70 focus:bg-white text-base sm:text-sm font-medium text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 shadow-2xs transition"
         />
         {search && (
           <button

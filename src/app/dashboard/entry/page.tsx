@@ -1025,7 +1025,7 @@ export default function OnePageGridEntry() {
             }
           }}
           placeholder="किसान खोज्नुहोस् वा कोड टाइप गर्नुहोस् (Search by ID or Name, e.g. '05', 'Ram')..."
-          className="w-full pl-9 pr-14 py-2 sm:py-2.5 bg-white hover:bg-slate-50/70 focus:bg-white text-xs sm:text-sm font-medium text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 shadow-2xs transition"
+          className="w-full pl-9 pr-14 py-2 sm:py-2.5 bg-white hover:bg-slate-50/70 focus:bg-white text-base sm:text-sm font-medium text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 shadow-2xs transition"
         />
         {/* Search Clear Icon */}
         <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center gap-1">

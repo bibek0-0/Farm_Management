@@ -795,7 +795,7 @@ function RecordsContent() {
                       setIsFarmerDropdownOpen(true);
                     }}
                     onFocus={() => setIsFarmerDropdownOpen(true)}
-                    className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs transition"
+                    className="w-full pl-9 pr-8 py-2 text-base sm:text-sm bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs transition"
                   />
                   {farmerSearchQuery && (
                     <button
@@ -1348,7 +1348,7 @@ function RecordsContent() {
                       setIsBuyerDropdownOpen(true);
                     }}
                     onFocus={() => setIsBuyerDropdownOpen(true)}
-                    className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs transition"
+                    className="w-full pl-9 pr-8 py-2 text-base sm:text-sm bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs transition"
                   />
                   {buyerSearchQuery && (
                     <button
