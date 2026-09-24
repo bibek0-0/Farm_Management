@@ -147,14 +147,15 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
           open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         aria-hidden="true"
+        style={{ visibility: open ? 'visible' : 'hidden' }}
       />
 
       {/* Drawer panel */}
       <div
         className={`fixed inset-y-0 left-0 z-50 lg:hidden w-72 bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${
-          open ? 'translate-x-0' : '-translate-x-full'
+          open ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none'
         }`}
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', visibility: open ? 'visible' : 'hidden' }}
       >
         {/* Drawer header */}
         <div className="flex items-center justify-between px-5 py-5 border-b border-slate-100 flex-shrink-0">
@@ -216,7 +217,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex overflow-x-hidden max-w-full">
+    <div className="min-h-screen bg-slate-50 flex overflow-x-hidden max-w-full" style={{ overscrollBehavior: 'none' }}>
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex flex-col w-60 flex-shrink-0 bg-white border-r border-slate-200 fixed inset-y-0 left-0 z-30 no-print">
         <DesktopSidebar />
