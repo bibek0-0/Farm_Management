@@ -130,35 +130,31 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
-    } else {
-      document.body.style.overflow = '';
-      document.body.style.touchAction = '';
     }
     return () => {
       document.body.style.overflow = '';
-      document.body.style.touchAction = '';
     };
   }, [open]);
+
+  // When closed, render NOTHING — no DOM elements that could intercept touches
+  if (!open) return null;
 
   return (
     <>
       {/* Backdrop */}
       <div
         onClick={onClose}
-        className={`fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300 ${
-          open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
+        className="fixed inset-0 bg-black/50 z-40 lg:hidden"
         aria-hidden="true"
-        style={{ visibility: open ? 'visible' : 'hidden' }}
       />
 
       {/* Drawer panel */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 lg:hidden w-72 bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${
-          open ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none'
-        }`}
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', visibility: open ? 'visible' : 'hidden' }}
+        className="fixed inset-y-0 left-0 z-50 lg:hidden w-72 bg-white shadow-2xl flex flex-col"
+        style={{
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          animation: 'slideInLeft 0.25s ease-out',
+        }}
       >
         {/* Drawer header */}
         <div className="flex items-center justify-between px-5 py-5 border-b border-slate-100 flex-shrink-0">

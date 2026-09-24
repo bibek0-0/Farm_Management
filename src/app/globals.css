@@ -7,6 +7,12 @@
   --color-farm-dark: #0f172a;
 }
 
+/* Mobile drawer slide-in animation */
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
 /* ─── Global Mobile Optimizations ──────────────────────────────────── */
 html {
   scroll-behavior: smooth;
@@ -19,6 +25,8 @@ html {
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Eliminate 300ms tap delay on all interactive elements */
