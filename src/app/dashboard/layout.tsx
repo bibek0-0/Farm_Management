@@ -126,17 +126,18 @@ function DesktopSidebar() {
 }
 
 function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
-  // When drawer opens, prevent the main scroll container from scrolling behind it
+  // Lock body scroll when drawer is open
   useEffect(() => {
-    const mainEl = document.getElementById('dashboard-main');
-    if (!mainEl) return;
     if (open) {
-      mainEl.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
     } else {
-      mainEl.style.overflow = '';
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
     }
     return () => {
-      if (mainEl) mainEl.style.overflow = '';
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
     };
   }, [open]);
 
@@ -219,7 +220,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex overflow-x-hidden max-w-full" style={{ overscrollBehavior: 'none' }}>
+    <div className="min-h-screen bg-slate-50 flex">
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex flex-col w-60 flex-shrink-0 bg-white border-r border-slate-200 fixed inset-y-0 left-0 z-30 no-print">
         <DesktopSidebar />
@@ -229,7 +230,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       <MobileDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       {/* Main content */}
-      <div className="flex-1 lg:pl-60 flex flex-col min-w-0 max-w-full overflow-x-hidden">
+      <div className="flex-1 lg:pl-60 flex flex-col min-w-0">
         {/* Mobile top bar */}
         <header
           className="lg:hidden flex items-center justify-between px-3 bg-white border-b border-slate-200 sticky top-0 z-20 no-print"
@@ -259,8 +260,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
 
         <main
           id="dashboard-main"
-          className="flex-1 px-2.5 sm:px-4 py-3 sm:py-6 lg:px-8 pb-6 min-w-0 max-w-full overflow-x-hidden overflow-y-auto"
-          style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+          className="flex-1 px-2.5 sm:px-4 py-3 sm:py-6 lg:px-8 pb-6 min-w-0"
         >
           {children}
         </main>
