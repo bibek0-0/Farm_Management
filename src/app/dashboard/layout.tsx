@@ -126,15 +126,17 @@ function DesktopSidebar() {
 }
 
 function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
-  // Lock body scroll when drawer is open
+  // When drawer opens, prevent the main scroll container from scrolling behind it
   useEffect(() => {
+    const mainEl = document.getElementById('dashboard-main');
+    if (!mainEl) return;
     if (open) {
-      document.body.style.overflow = 'hidden';
+      mainEl.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = '';
+      mainEl.style.overflow = '';
     }
     return () => {
-      document.body.style.overflow = '';
+      if (mainEl) mainEl.style.overflow = '';
     };
   }, [open]);
 
@@ -227,7 +229,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       <MobileDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       {/* Main content */}
-      <div className="flex-1 lg:pl-60 flex flex-col min-h-screen min-w-0 max-w-full overflow-x-hidden">
+      <div className="flex-1 lg:pl-60 flex flex-col min-w-0 max-w-full overflow-x-hidden">
         {/* Mobile top bar */}
         <header
           className="lg:hidden flex items-center justify-between px-3 bg-white border-b border-slate-200 sticky top-0 z-20 no-print"
@@ -255,7 +257,11 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
           <div className="w-10" />
         </header>
 
-        <main className="flex-1 px-2.5 sm:px-4 py-3 sm:py-6 lg:px-8 pb-6 min-w-0 max-w-full overflow-x-hidden">
+        <main
+          id="dashboard-main"
+          className="flex-1 px-2.5 sm:px-4 py-3 sm:py-6 lg:px-8 pb-6 min-w-0 max-w-full overflow-x-hidden overflow-y-auto"
+          style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+        >
           {children}
         </main>
       </div>
