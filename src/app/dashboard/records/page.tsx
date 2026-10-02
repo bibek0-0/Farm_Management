@@ -966,9 +966,9 @@ function RecordsContent() {
 
                   {/* Custom date range with Nepali BS Date Pickers */}
                   {preset === 'custom' && (
-                    <div className="flex items-center gap-2 flex-wrap bg-slate-50 p-2 rounded-xl border border-slate-200">
-                      <NepaliDatePicker label="सुरु मिति (From)" value={startDate} onChange={setStartDate} />
-                      <NepaliDatePicker label="अन्त्य मिति (To)" value={endDate} onChange={setEndDate} />
+                    <div className="flex items-center gap-2 flex-wrap bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+                      <NepaliDatePicker label="सुरु (From)" value={startDate} onChange={setStartDate} compact />
+                      <NepaliDatePicker label="अन्त्य (To)" value={endDate} onChange={setEndDate} compact />
                     </div>
                   )}
 
