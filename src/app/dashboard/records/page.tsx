@@ -77,6 +77,7 @@ function formatDate(dateStr: string) {
 }
 
 const PAGE_SIZE = 20;
+const BUYER_PAGE_SIZE_CONST = 20;
 
 function RecordsContent() {
   const searchParams = useSearchParams();
@@ -338,7 +339,7 @@ function RecordsContent() {
 
   // Pagination for buyer sales
   const [buyerPage, setBuyerPage] = useState(1);
-  const BUYER_PAGE_SIZE = 25;
+  const BUYER_PAGE_SIZE = BUYER_PAGE_SIZE_CONST;
 
   // Inline edit for buyer sale
   const [editSaleId, setEditSaleId] = useState<string | null>(null);
@@ -1278,33 +1279,75 @@ function RecordsContent() {
                   </table>
                 </div>
 
-                {/* Farmer Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
-                    <p className="text-xs text-slate-500">
-                      Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, entries.length)} of {entries.length}
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        disabled={page === 1}
-                        className="p-1.5 text-slate-500 hover:text-slate-800 border border-slate-200 rounded-lg disabled:opacity-40 transition"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                      <span className="px-3 py-1 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg">
-                        {page} / {totalPages}
-                      </span>
-                      <button
-                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                        disabled={page === totalPages}
-                        className="p-1.5 text-slate-500 hover:text-slate-800 border border-slate-200 rounded-lg disabled:opacity-40 transition"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
+                {/* Farmer Pagination - always visible */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 border-t border-slate-100 bg-slate-50/60">
+                  <p className="text-xs text-slate-500 font-medium">
+                    {safeEntries.length === 0
+                      ? 'कुनै रेकर्ड छैन'
+                      : `देखाइएको: ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, safeEntries.length)} / जम्मा ${safeEntries.length} रेकर्ड`}
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setPage(1)}
+                      disabled={page === 1}
+                      className="p-1.5 text-slate-500 hover:text-slate-800 border border-slate-200 bg-white rounded-lg disabled:opacity-30 transition cursor-pointer"
+                      title="पहिलो पृष्ठ"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 bg-white rounded-lg disabled:opacity-30 transition cursor-pointer"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">अघिल्लो</span>
+                    </button>
+                    {/* Page number buttons */}
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                        .reduce<(number | '...')[]>((acc, p, idx, arr) => {
+                          if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('...');
+                          acc.push(p);
+                          return acc;
+                        }, [])
+                        .map((item, idx) =>
+                          item === '...' ? (
+                            <span key={`ellipsis-f-${idx}`} className="px-1.5 text-xs text-slate-400">…</span>
+                          ) : (
+                            <button
+                              key={`page-f-${item}`}
+                              onClick={() => setPage(item as number)}
+                              className={`min-w-[32px] h-8 px-2 text-xs font-bold rounded-lg transition cursor-pointer border ${
+                                page === item
+                                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                              }`}
+                            >
+                              {item}
+                            </button>
+                          )
+                        )}
                     </div>
+                    <button
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={page === totalPages || totalPages === 0}
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 bg-white rounded-lg disabled:opacity-30 transition cursor-pointer"
+                    >
+                      <span className="hidden sm:inline">अर्को</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setPage(totalPages)}
+                      disabled={page === totalPages || totalPages === 0}
+                      className="p-1.5 text-slate-500 hover:text-slate-800 border border-slate-200 bg-white rounded-lg disabled:opacity-30 transition cursor-pointer"
+                      title="अन्तिम पृष्ठ"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                )}
+                </div>
               </>
             )}
           </div>
@@ -2106,34 +2149,75 @@ function RecordsContent() {
                   </table>
                 </div>
 
-                {/* Buyer Pagination */}
-                {totalBuyerPages > 1 && (
-                  <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
-                    <p className="text-xs text-slate-500">
-                      Showing {(buyerPage - 1) * BUYER_PAGE_SIZE + 1}–
-                      {Math.min(buyerPage * BUYER_PAGE_SIZE, buyerSales.length)} of {buyerSales.length}
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setBuyerPage((p) => Math.max(1, p - 1))}
-                        disabled={buyerPage === 1}
-                        className="p-1.5 text-slate-500 hover:text-slate-800 border border-slate-200 rounded-lg disabled:opacity-40 transition"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                      <span className="px-3 py-1 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg">
-                        {buyerPage} / {totalBuyerPages}
-                      </span>
-                      <button
-                        onClick={() => setBuyerPage((p) => Math.min(totalBuyerPages, p + 1))}
-                        disabled={buyerPage === totalBuyerPages}
-                        className="p-1.5 text-slate-500 hover:text-slate-800 border border-slate-200 rounded-lg disabled:opacity-40 transition"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
+                {/* Buyer Pagination - always visible */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 border-t border-slate-100 bg-slate-50/60">
+                  <p className="text-xs text-slate-500 font-medium">
+                    {buyerSales.length === 0
+                      ? 'कुनै रेकर्ड छैन'
+                      : `देखाइएको: ${(buyerPage - 1) * BUYER_PAGE_SIZE + 1}–${Math.min(buyerPage * BUYER_PAGE_SIZE, buyerSales.length)} / जम्मा ${buyerSales.length} रेकर्ड`}
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setBuyerPage(1)}
+                      disabled={buyerPage === 1}
+                      className="p-1.5 text-slate-500 hover:text-slate-800 border border-slate-200 bg-white rounded-lg disabled:opacity-30 transition cursor-pointer"
+                      title="पहिलो पृष्ठ"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setBuyerPage((p) => Math.max(1, p - 1))}
+                      disabled={buyerPage === 1}
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 bg-white rounded-lg disabled:opacity-30 transition cursor-pointer"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">अघिल्लो</span>
+                    </button>
+                    {/* Page number buttons */}
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalBuyerPages }, (_, i) => i + 1)
+                        .filter((p) => p === 1 || p === totalBuyerPages || Math.abs(p - buyerPage) <= 1)
+                        .reduce<(number | '...')[]>((acc, p, idx, arr) => {
+                          if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('...');
+                          acc.push(p);
+                          return acc;
+                        }, [])
+                        .map((item, idx) =>
+                          item === '...' ? (
+                            <span key={`ellipsis-b-${idx}`} className="px-1.5 text-xs text-slate-400">…</span>
+                          ) : (
+                            <button
+                              key={`page-b-${item}`}
+                              onClick={() => setBuyerPage(item as number)}
+                              className={`min-w-[32px] h-8 px-2 text-xs font-bold rounded-lg transition cursor-pointer border ${
+                                buyerPage === item
+                                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                              }`}
+                            >
+                              {item}
+                            </button>
+                          )
+                        )}
                     </div>
+                    <button
+                      onClick={() => setBuyerPage((p) => Math.min(totalBuyerPages, p + 1))}
+                      disabled={buyerPage === totalBuyerPages || totalBuyerPages === 0}
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 bg-white rounded-lg disabled:opacity-30 transition cursor-pointer"
+                    >
+                      <span className="hidden sm:inline">अर्को</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setBuyerPage(totalBuyerPages)}
+                      disabled={buyerPage === totalBuyerPages || totalBuyerPages === 0}
+                      className="p-1.5 text-slate-500 hover:text-slate-800 border border-slate-200 bg-white rounded-lg disabled:opacity-30 transition cursor-pointer"
+                      title="अन्तिम पृष्ठ"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                )}
+                </div>
               </>
             )}
           </div>
