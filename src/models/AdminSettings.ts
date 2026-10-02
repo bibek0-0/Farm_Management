@@ -1,15 +1,21 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+export type UserRole = 'upper_admin' | 'admin';
+
 export interface IAdminSettings extends Document {
   username: string;
   passwordHash: string;
+  role: UserRole;
+  name?: string;
+  createdAt: Date;
   updatedAt: Date;
 }
 
 /**
- * AdminSettings uses a singleton pattern — only one document should
- * ever exist in this collection. Queries should use findOne() with no filter.
- * The document is auto-seeded on first login if it doesn't exist.
+ * AdminSettings collection stores administrative user accounts.
+ * Supported roles:
+ * - 'upper_admin': Master administrator (bibek) with full privileges and ability to manage admin accounts.
+ * - 'admin': Standard administrator (admin) with access to all daily farm operations.
  */
 const AdminSettingsSchema = new Schema<IAdminSettings>(
   {
@@ -18,10 +24,20 @@ const AdminSettingsSchema = new Schema<IAdminSettings>(
       required: true,
       trim: true,
       lowercase: true,
+      unique: true,
     },
     passwordHash: {
       type: String,
       required: true,
+    },
+    role: {
+      type: String,
+      enum: ['upper_admin', 'admin'],
+      default: 'admin',
+    },
+    name: {
+      type: String,
+      trim: true,
     },
   },
   {

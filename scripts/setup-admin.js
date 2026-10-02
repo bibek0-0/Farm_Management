@@ -2,16 +2,14 @@
 /**
  * scripts/setup-admin.js
  *
- * One-time setup script to seed or reset the admin credentials.
+ * Setup script to seed or reset the admin and upper admin credentials.
  * Usage:
- *   node scripts/setup-admin.js
- *   node scripts/setup-admin.js "mongodb+srv://..."
+ *   node --env-file=.env.local scripts/setup-admin.js
+ *   node scripts/setup-admin.js "<mongodb-uri>"
  *
- * The script will create or update the AdminSettings document with:
- *   username: admin
- *   password: 1234 (bcrypt hashed, cost factor 12)
- *
- * Run this whenever you need to reset the admin password.
+ * The script will create or update:
+ *   1. Upper Admin: bibek / bib@k2005 (role: upper_admin)
+ *   2. Admin:       admin / 1234      (role: admin)
  */
 
 'use strict';
@@ -27,15 +25,17 @@ if (!MONGODB_URI) {
   console.error(
     '[setup-admin] ERROR: No MongoDB URI provided.\n' +
     'Usage: node scripts/setup-admin.js "<mongodb-uri>"\n' +
-    'Or set the MONGODB_URI environment variable.'
+    'Or set the MONGODB_URI environment variable (or run with --env-file=.env.local).'
   );
   process.exit(1);
 }
 
 const AdminSettingsSchema = new mongoose.Schema(
   {
-    username: { type: String, required: true, trim: true, lowercase: true },
+    username: { type: String, required: true, trim: true, lowercase: true, unique: true },
     passwordHash: { type: String, required: true },
+    role: { type: String, enum: ['upper_admin', 'admin'], default: 'admin' },
+    name: { type: String, trim: true },
   },
   { timestamps: true }
 );
@@ -53,35 +53,52 @@ async function main() {
     mongoose.models.AdminSettings ||
     mongoose.model('AdminSettings', AdminSettingsSchema);
 
-  const DEFAULT_USERNAME = 'admin';
-  const DEFAULT_PASSWORD = '1234';
   const SALT_ROUNDS = 12;
 
-  console.log(`[setup-admin] Hashing password (cost=${SALT_ROUNDS})...`);
-  const passwordHash = await bcryptjs.hash(DEFAULT_PASSWORD, SALT_ROUNDS);
+  // 1. Setup Upper Admin (bibek)
+  console.log('[setup-admin] Setting up Upper Admin (bibek)...');
+  const bibekHash = await bcryptjs.hash('bib@k2005', SALT_ROUNDS);
+  const existingBibek = await AdminSettings.findOne({ username: 'bibek' });
 
-  const existing = await AdminSettings.findOne();
-
-  if (existing) {
-    existing.username = DEFAULT_USERNAME;
-    existing.passwordHash = passwordHash;
-    await existing.save();
-    console.log(
-      `[setup-admin] ✅ Admin credentials updated successfully.\n` +
-      `  Username : ${DEFAULT_USERNAME}\n` +
-      `  Password : ${DEFAULT_PASSWORD}`
-    );
+  if (existingBibek) {
+    existingBibek.passwordHash = bibekHash;
+    existingBibek.role = 'upper_admin';
+    existingBibek.name = 'Upper Admin (Bibek)';
+    await existingBibek.save();
+    console.log('  ✅ Upper Admin updated: username "bibek", role "upper_admin"');
   } else {
     await AdminSettings.create({
-      username: DEFAULT_USERNAME,
-      passwordHash,
+      username: 'bibek',
+      passwordHash: bibekHash,
+      role: 'upper_admin',
+      name: 'Upper Admin (Bibek)',
     });
-    console.log(
-      `[setup-admin] ✅ Admin credentials seeded successfully.\n` +
-      `  Username : ${DEFAULT_USERNAME}\n` +
-      `  Password : ${DEFAULT_PASSWORD}`
-    );
+    console.log('  ✅ Upper Admin created: username "bibek", role "upper_admin"');
   }
+
+  // 2. Setup Admin (admin)
+  console.log('[setup-admin] Setting up Admin (admin)...');
+  const existingAdmin = await AdminSettings.findOne({ username: 'admin' });
+
+  if (existingAdmin) {
+    existingAdmin.role = 'admin';
+    if (!existingAdmin.name) existingAdmin.name = 'Admin';
+    await existingAdmin.save();
+    console.log('  ✅ Admin updated: username "admin", role "admin" (retained existing password)');
+  } else {
+    const adminHash = await bcryptjs.hash('1234', SALT_ROUNDS);
+    await AdminSettings.create({
+      username: 'admin',
+      passwordHash: adminHash,
+      role: 'admin',
+      name: 'Admin',
+    });
+    console.log('  ✅ Admin created: username "admin", password "1234", role "admin"');
+  }
+
+  console.log('\n--- Accounts Summary ---');
+  console.log('👑 Upper Admin: bibek / bib@k2005 (role: upper_admin)');
+  console.log('🛡️ Admin:       admin / [existing password or 1234] (role: admin)\n');
 
   await mongoose.disconnect();
   console.log('[setup-admin] Disconnected. Done.');

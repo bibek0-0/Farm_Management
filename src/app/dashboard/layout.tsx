@@ -1,6 +1,6 @@
 'use client';
 
-import { SessionProvider } from 'next-auth/react';
+import { SessionProvider, signOut, useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -15,8 +15,9 @@ import {
   Menu,
   X,
   ChevronRight,
+  Crown,
+  ShieldCheck,
 } from 'lucide-react';
-import { signOut } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 
 const navLinks = [
@@ -90,6 +91,28 @@ function NavLink({
   );
 }
 
+function UserProfileBadge({ mobile = false }: { mobile?: boolean }) {
+  const { data: session } = useSession();
+  const username = session?.user?.username || 'admin';
+
+  return (
+    <div
+      className={`rounded-xl border flex items-center gap-2.5 transition-all ${
+        mobile ? 'px-4 py-3 bg-slate-50 border-slate-200' : 'px-3 py-2.5 bg-slate-50/90 border-slate-200/80 mb-2'
+      }`}
+    >
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-sm bg-green-50 text-green-700">
+        <Users className="w-4 h-4 text-green-700" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold text-slate-800 truncate leading-tight capitalize">
+          {username}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function DesktopSidebar() {
   return (
     <div className="flex flex-col h-full">
@@ -111,8 +134,9 @@ function DesktopSidebar() {
         ))}
       </nav>
 
-      {/* Sign out */}
-      <div className="px-3 py-4 border-t border-slate-100">
+      {/* User profile & Sign out */}
+      <div className="px-3 py-3 border-t border-slate-100">
+        <UserProfileBadge />
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
           className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all w-full group"
@@ -176,8 +200,13 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
           </button>
         </div>
 
+        {/* User profile */}
+        <div className="px-4 pt-3 pb-1">
+          <UserProfileBadge mobile />
+        </div>
+
         {/* Nav links */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
           {navLinks.map((link) => (
             <NavLink key={link.href} {...link} mobile onClick={onClose} />
           ))}

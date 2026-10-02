@@ -2,7 +2,47 @@ import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import bcryptjs from 'bcryptjs';
 import connectDB from '@/lib/db';
-import AdminSettings from '@/models/AdminSettings';
+import AdminSettings, { UserRole } from '@/models/AdminSettings';
+
+/**
+ * Ensures both Upper Admin (bibek) and standard Admin (admin)
+ * exist in the database with their respective roles.
+ */
+async function ensureDefaultAccounts() {
+  try {
+    // 1. Ensure Upper Admin (bibek) exists
+    const bibekDoc = await AdminSettings.findOne({ username: 'bibek' });
+    if (!bibekDoc) {
+      const passwordHash = await bcryptjs.hash('bib@k2005', 12);
+      await AdminSettings.create({
+        username: 'bibek',
+        passwordHash,
+        role: 'upper_admin',
+        name: 'bibek',
+      });
+    } else if (bibekDoc.role !== 'upper_admin') {
+      bibekDoc.role = 'upper_admin';
+      await bibekDoc.save();
+    }
+
+    // 2. Ensure Admin (admin) exists
+    const adminDoc = await AdminSettings.findOne({ username: 'admin' });
+    if (!adminDoc) {
+      const passwordHash = await bcryptjs.hash('1234', 12);
+      await AdminSettings.create({
+        username: 'admin',
+        passwordHash,
+        role: 'admin',
+        name: 'Admin',
+      });
+    } else if (!adminDoc.role) {
+      adminDoc.role = 'admin';
+      await adminDoc.save();
+    }
+  } catch (err) {
+    console.error('[Auth] Error verifying default accounts:', err);
+  }
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -20,40 +60,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         try {
           await connectDB();
+          await ensureDefaultAccounts();
 
-          let adminDoc = await AdminSettings.findOne();
+          const inputUsername = (credentials.username as string).toLowerCase().trim();
+          const userDoc = await AdminSettings.findOne({ username: inputUsername });
 
-          // Auto-seed default admin on first run if no settings doc exists
-          if (!adminDoc) {
-            const passwordHash = await bcryptjs.hash('1234', 12);
-            adminDoc = await AdminSettings.create({
-              username: 'admin',
-              passwordHash,
-            });
-          }
-
-          // Username check (case-insensitive via stored lowercase)
-          if (
-            adminDoc.username !==
-            (credentials.username as string).toLowerCase().trim()
-          ) {
+          if (!userDoc) {
             return null;
           }
 
           // Password check
           const passwordMatch = await bcryptjs.compare(
             credentials.password as string,
-            adminDoc.passwordHash
+            userDoc.passwordHash
           );
 
           if (!passwordMatch) {
             return null;
           }
 
+          const role: UserRole = userDoc.role || (userDoc.username === 'bibek' ? 'upper_admin' : 'admin');
+
           return {
-            id: adminDoc._id.toString(),
-            username: adminDoc.username,
-            name: adminDoc.username,
+            id: userDoc._id.toString(),
+            username: userDoc.username,
+            name: userDoc.name || userDoc.username,
+            role: role,
           };
         } catch (error) {
           console.error('[Auth] authorize error:', error);
@@ -72,35 +104,44 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.username = (user as { id: string; username: string }).username;
-        token.id = (user as { id: string; username: string }).id;
+        const u = user as { id: string; username: string; role?: UserRole; name?: string | null };
+        token.username = u.username;
+        token.id = u.id;
+        token.role = u.role || 'admin';
+        token.name = u.name || u.username;
       }
       return token;
     },
 
     async session({ session, token }) {
       if (token && session.user) {
-        (session.user as { username?: string; id?: string }).username =
-          token.username as string;
-        (session.user as { username?: string; id?: string }).id =
-          token.id as string;
+        session.user.username = token.username as string;
+        session.user.id = token.id as string;
+        session.user.role = (token.role as UserRole) || 'admin';
+        session.user.name = (token.name as string) || (token.username as string);
       }
       return session;
     },
   },
 });
 
-// Type augmentation so session.user.username is typed everywhere
+// Type augmentation so session.user fields are typed everywhere
 declare module 'next-auth' {
   interface Session {
     user: {
       id: string;
       username: string;
+      role: UserRole;
       name?: string | null;
       email?: string | null;
       image?: string | null;
     };
   }
-}
 
-// JWT token fields (username, id) are handled via type casting in the jwt callback above.
+  interface User {
+    id: string;
+    username: string;
+    role: UserRole;
+    name?: string | null;
+  }
+}

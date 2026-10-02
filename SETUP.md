@@ -33,15 +33,19 @@ npm run dev
 ```
 Open http://localhost:3000
 
-### 4. First Login
-- **Username:** `admin`
-- **Password:** `1234`
-- **Change your password immediately** at `/dashboard/settings`
+### 4. Default Login Accounts
+- **👑 Upper Admin (Master Administrator):**
+  - **Username:** `bibek`
+  - **Password:** `bib@k2005`
+  - Can see and do everything Admin can see or do, plus reset and manage Admin accounts.
+- **🛡️ Standard Admin:**
+  - **Username:** `admin`
+  - **Password:** `1234` (or configured password)
+  - Full access to farm operations (milk entries, farmers, slips, analytics).
 
-The system auto-creates admin credentials on first login. Alternatively run the seed script:
+The system auto-seeds default credentials on login. Alternatively run the setup script:
 ```bash
-npm install dotenv  # if not already installed
-node scripts/setup-admin.js
+node --env-file=.env.local scripts/setup-admin.js
 ```
 
 ---
