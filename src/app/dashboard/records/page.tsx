@@ -463,6 +463,33 @@ function RecordsContent() {
     );
   }, [buyerSales]);
 
+  // Farmer grouped summary list (for farmer list view)
+  const farmerSummaryList = useMemo(() => {
+    const map: Record<
+      string,
+      { farmerId: string; farmerCode: string; name: string; totalLiters: number; totalAmount: number; entryCount: number }
+    > = {};
+    safeEntries.forEach((e) => {
+      let fId: string, fCode: string, fName: string;
+      if (e.farmerId && typeof e.farmerId === 'object') {
+        fId = e.farmerId._id; fCode = e.farmerId.farmerCode; fName = e.farmerId.name;
+      } else {
+        const f = safeFarmers.find((f) => f._id === e.farmerId);
+        if (!f) return;
+        fId = f._id; fCode = f.farmerCode; fName = f.name;
+      }
+      if (!map[fId]) map[fId] = { farmerId: fId, farmerCode: fCode, name: fName, totalLiters: 0, totalAmount: 0, entryCount: 0 };
+      map[fId].totalLiters += e.quantity || 0;
+      map[fId].totalAmount += e.amount ?? ((e.quantity || 0) * (e.rate || 0));
+      map[fId].entryCount += 1;
+    });
+    return Object.values(map).sort((a, b) => {
+      const nA = parseInt(a.farmerCode.replace(/\D/g, ''), 10) || 0;
+      const nB = parseInt(b.farmerCode.replace(/\D/g, ''), 10) || 0;
+      return nA !== nB ? nA - nB : a.farmerCode.localeCompare(b.farmerCode);
+    });
+  }, [safeEntries, safeFarmers]);
+
   const matchingBuyerNames = buyerNames.filter((name) => {
     if (!buyerSearchQuery.trim()) return true;
     return name.toLowerCase().includes(buyerSearchQuery.trim().toLowerCase());
@@ -759,133 +786,35 @@ function RecordsContent() {
       {/* ======================================================= */}
       {activeTab === 'farmers' && (
         <>
-          {/* 1. SEARCH BAR (OUTSIDE FILTER BAR, ALWAYS ACCESSIBLE) */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-3 sm:p-4 no-print flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            {/* Search Input / Selected Farmer Pill */}
-            <div className="flex-1 max-w-lg">
-              {farmerFilter ? (
-                <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-300 text-emerald-950 rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold shadow-2xs">
-                  <User className="w-4 h-4 text-emerald-700 flex-shrink-0" />
-                  <span className="font-mono bg-white px-2 py-0.5 rounded border border-emerald-200 text-emerald-900 font-bold">
-                    {selectedFarmerObj?.farmerCode ?? 'Farmer'}
-                  </span>
-                  <span className="truncate text-emerald-950 font-bold">
-                    {selectedFarmerObj?.name ?? 'Selected'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFarmerFilter('');
-                      setFarmerSearchQuery('');
-                    }}
-                    className="ml-auto p-1 hover:bg-emerald-200 rounded-md text-emerald-900 transition cursor-pointer"
-                    title="Clear farmer filter (सबै किसान देखाउनुहोस्)"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <div className="relative" ref={farmerDropdownRef}>
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input
-                    type="text"
-                    placeholder="किसान खोज्नुहोस् वा छान्नुहोस् (Search Farmer by Name or Code)..."
-                    value={farmerSearchQuery}
-                    onChange={(e) => {
-                      setFarmerSearchQuery(e.target.value);
-                      setIsFarmerDropdownOpen(true);
-                    }}
-                    onFocus={() => setIsFarmerDropdownOpen(true)}
-                    className="w-full pl-9 pr-8 py-2 text-base sm:text-sm bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs transition"
-                  />
-                  {farmerSearchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setFarmerSearchQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-full"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-
-                  {/* Dropdown list */}
-                  {isFarmerDropdownOpen && (
-                    <div className="absolute z-30 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl divide-y divide-slate-100">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFarmerFilter('');
-                          setFarmerSearchQuery('');
-                          setIsFarmerDropdownOpen(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center justify-between font-semibold text-slate-700"
-                      >
-                        <span>सबै किसान (All Farmers)</span>
-                        {!farmerFilter && <Check className="w-3.5 h-3.5 text-emerald-600" />}
-                      </button>
-
-                      {matchingFarmers.length === 0 ? (
-                        <div className="px-3 py-3 text-center text-xs text-slate-400">
-                          कुनै किसान भेटिएन (No farmers found)
-                        </div>
-                      ) : (
-                        matchingFarmers.map((f) => (
-                          <button
-                            key={f._id}
-                            type="button"
-                            onClick={() => {
-                              setFarmerFilter(f._id);
-                              setFarmerSearchQuery('');
-                              setIsFarmerDropdownOpen(false);
-                            }}
-                            className="w-full text-left px-3 py-2 text-xs hover:bg-emerald-50/80 flex items-center justify-between transition-colors cursor-pointer"
-                          >
-                            <div className="flex items-center gap-2 truncate">
-                              <span className="font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[11px]">
-                                {f.farmerCode}
-                              </span>
-                              <span className="font-bold text-slate-900 truncate">{f.name}</span>
-                            </div>
-                            <span className="text-[11px] text-slate-400 font-mono flex-shrink-0 ml-2">
-                              Rs. {f.defaultRate}/L
-                            </span>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Quick Actions (Print Payment Slip Button when farmer selected) */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {farmerFilter && (
+          {/* Back button + farmer info (shown when farmer is selected) */}
+          {farmerFilter && (
+            <div className="bg-emerald-50/60 border border-emerald-200 p-3 sm:p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 no-print">
+              <div className="flex items-center gap-3 flex-wrap">
                 <button
                   type="button"
-                  onClick={handlePrint}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
-                  title="Print farmer payment slip"
+                  onClick={() => { setFarmerFilter(''); setFarmerSearchQuery(''); setPage(1); }}
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-emerald-800 bg-white border border-emerald-200 rounded-xl hover:bg-emerald-50 active:bg-emerald-100 transition cursor-pointer"
                 >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>भुक्तानी स्लिप प्रिन्ट (Print Slip)</span>
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>किसान सूची</span>
                 </button>
-              )}
-              {farmerFilter && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFarmerFilter('');
-                    setFarmerSearchQuery('');
-                  }}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900 px-2.5 py-1.5 hover:bg-slate-100 rounded-xl transition cursor-pointer border border-slate-200"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>सबै किसान</span>
-                </button>
-              )}
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm bg-white text-emerald-800 font-bold px-2 py-0.5 rounded border border-emerald-200">
+                    {selectedFarmerObj?.farmerCode}
+                  </span>
+                  <span className="font-bold text-emerald-950 text-base">{selectedFarmerObj?.name} को हिसाब</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>भुक्तानी स्लिप प्रिन्ट (Print Slip)</span>
+              </button>
             </div>
-          </div>
+          )}
 
           {/* 2. FILTERS (COLLAPSIBLE / MINIMIZABLE - DEFAULT MINIMIZED) */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden no-print">
@@ -911,9 +840,6 @@ function RecordsContent() {
                   </span>
                   <span className="bg-white border border-slate-200 text-slate-700 font-semibold px-2 py-0.5 rounded-md">
                     {shiftFilter === 'all' ? 'सबै शिफ्ट' : shiftFilter === 'morning' ? 'बिहान' : 'बेलुका'}
-                  </span>
-                  <span className="bg-white border border-slate-200 text-slate-700 font-semibold px-2 py-0.5 rounded-md truncate max-w-[130px]">
-                    {selectedFarmerObj ? selectedFarmerObj.name : 'सबै किसान'}
                   </span>
                 </div>
               </div>
@@ -992,45 +918,171 @@ function RecordsContent() {
             )}
           </div>
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 no-print">
-            <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-              <p className="text-xs text-slate-500 font-medium">कुल परिमाण (Total Liters)</p>
-              <p className="text-2xl font-bold text-green-600 mt-1 font-mono">{totalLiters.toFixed(1)} L</p>
+          {/* LOADING STATE */}
+          {loading && (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center no-print">
+              <Loader2 className="w-8 h-8 animate-spin text-green-600 mx-auto mb-3" />
+              <p className="text-slate-500 text-sm">लोड हुँदैछ...</p>
             </div>
-            <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-              <p className="text-xs text-slate-500 font-medium">कुल रकम (Total Amount)</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1 font-mono">{formatRs(totalAmount)}</p>
-            </div>
-            <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-              <p className="text-xs text-slate-500 font-medium">औसत दर (Avg Rate)</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1 font-mono">
-                {totalLiters > 0 ? `Rs. ${(totalAmount / totalLiters).toFixed(2)}` : '—'}
-              </p>
-            </div>
-            <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-              <p className="text-xs text-slate-500 font-medium">कुल इन्ट्री (Entries)</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1 font-mono">{safeEntries.length}</p>
-            </div>
-          </div>
+          )}
 
-          {/* Table / Error */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden no-print">
-            {loading ? (
-              <div className="p-12 text-center">
-                <Loader2 className="w-8 h-8 animate-spin text-green-600 mx-auto mb-3" />
-                <p className="text-slate-500 text-sm">लोड हुँदैछ...</p>
+          {/* ERROR STATE */}
+          {!loading && error && (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center text-red-600 no-print">
+              <AlertCircle className="w-8 h-8 mx-auto mb-2 text-red-500" />
+              <p className="font-medium text-sm">{error}</p>
+            </div>
+          )}
+
+          {/* ── FARMER LIST VIEW (no farmer selected) ── */}
+          {!farmerFilter && !loading && !error && (
+            <>
+              {/* Aggregate Summary Cards */}
+              <div className="grid grid-cols-3 gap-3 no-print">
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-medium">किसानहरू (Farmers)</p>
+                  <p className="text-2xl font-bold text-emerald-700 mt-1 font-mono">{farmerSummaryList.length}</p>
+                </div>
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-medium">कुल परिमाण (Total Liters)</p>
+                  <p className="text-2xl font-bold text-green-600 mt-1 font-mono">{totalLiters.toFixed(1)} L</p>
+                </div>
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-medium">कुल रकम (Total Amount)</p>
+                  <p className="text-2xl font-bold text-slate-900 mt-1 font-mono">{formatRs(totalAmount)}</p>
+                </div>
               </div>
-            ) : error ? (
-              <div className="p-8 text-center text-red-600">
-                <AlertCircle className="w-8 h-8 mx-auto mb-2 text-red-500" />
-                <p className="font-medium text-sm">{error}</p>
+
+              {/* Farmer List Card */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden no-print">
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-sm sm:text-base text-slate-900">किसानहरूको सूची (Farmers List)</h3>
+                    <p className="text-xs text-slate-500">किसानमा क्लिक गरेर विस्तृत दूध संकलन विवरण हेर्नुहोस्</p>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg flex-shrink-0">
+                    {farmerSummaryList.length} किसान
+                  </span>
+                </div>
+
+                {safeEntries.length === 0 ? (
+                  <div className="p-12 text-center text-slate-400"><p className="text-sm">कुनै अभिलेख फेला परेन।</p></div>
+                ) : (
+                  <>
+                    {/* Mobile Cards */}
+                    <div className="md:hidden divide-y divide-slate-100">
+                      {farmerSummaryList.map((item) => (
+                        <button
+                          key={`mob-fl-${item.farmerId}`}
+                          type="button"
+                          onClick={() => { setFarmerFilter(item.farmerId); setPage(1); }}
+                          className="w-full text-left p-4 hover:bg-emerald-50/40 active:bg-emerald-50 transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-200">{item.farmerCode}</span>
+                              <span className="font-bold text-slate-900 text-sm">{item.name}</span>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-mono font-semibold text-slate-600">{item.totalLiters.toFixed(1)} L</span>
+                            <span className="font-mono font-bold text-green-700">{formatRs(item.totalAmount)}</span>
+                            <span className="text-slate-400">{item.entryCount} इन्ट्री</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Desktop Table */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full text-left text-sm">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            <th className="py-3 px-4">कोड</th>
+                            <th className="py-3 px-4">किसानको नाम</th>
+                            <th className="py-3 px-4 text-center">इन्ट्री</th>
+                            <th className="py-3 px-4 text-right">जम्मा दूध (L)</th>
+                            <th className="py-3 px-4 text-right">जम्मा रकम</th>
+                            <th className="py-3 px-4 text-center">विवरण</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {farmerSummaryList.map((item) => (
+                            <tr
+                              key={`desk-fl-${item.farmerId}`}
+                              className="hover:bg-emerald-50/40 transition cursor-pointer"
+                              onClick={() => { setFarmerFilter(item.farmerId); setPage(1); }}
+                            >
+                              <td className="py-3 px-4">
+                                <span className="font-mono text-xs bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-200">{item.farmerCode}</span>
+                              </td>
+                              <td className="py-3 px-4 font-bold text-slate-900">{item.name}</td>
+                              <td className="py-3 px-4 text-center font-mono text-slate-600">{item.entryCount}</td>
+                              <td className="py-3 px-4 text-right font-mono font-bold text-green-700">{item.totalLiters.toFixed(1)} L</td>
+                              <td className="py-3 px-4 text-right font-mono font-semibold text-slate-900">{formatRs(item.totalAmount)}</td>
+                              <td className="py-3 px-4 text-center">
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setFarmerFilter(item.farmerId); setPage(1); }}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition cursor-pointer"
+                                >
+                                  <span>हेर्नुहोस्</span>
+                                  <ArrowRight className="w-3 h-3" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="bg-slate-100/80 border-t-2 border-slate-200 font-bold text-slate-900">
+                            <td className="py-2.5 px-4 font-bold" colSpan={2}>कुल जम्मा (Total)</td>
+                            <td className="py-2.5 px-4 text-center font-mono font-bold">{safeEntries.length}</td>
+                            <td className="py-2.5 px-4 text-right font-mono font-black text-green-700">{totalLiters.toFixed(1)} L</td>
+                            <td className="py-2.5 px-4 text-right font-mono font-black">{formatRs(totalAmount)}</td>
+                            <td />
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </>
+                )}
               </div>
-            ) : safeEntries.length === 0 ? (
-              <div className="p-12 text-center text-slate-400">
-                <p className="text-sm">कुनै अभिलेख फेला परेन।</p>
+            </>
+          )}
+
+          {/* ── FARMER DETAIL VIEW (farmer selected) ── */}
+          {farmerFilter && !loading && !error && (
+            <>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 no-print">
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-medium">कुल परिमाण (Total Liters)</p>
+                  <p className="text-2xl font-bold text-green-600 mt-1 font-mono">{totalLiters.toFixed(1)} L</p>
+                </div>
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-medium">कुल रकम (Total Amount)</p>
+                  <p className="text-2xl font-bold text-slate-900 mt-1 font-mono">{formatRs(totalAmount)}</p>
+                </div>
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-medium">औसत दर (Avg Rate)</p>
+                  <p className="text-2xl font-bold text-slate-900 mt-1 font-mono">{totalLiters > 0 ? `Rs. ${(totalAmount / totalLiters).toFixed(2)}` : '—'}</p>
+                </div>
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-medium">कुल इन्ट्री (Entries)</p>
+                  <p className="text-2xl font-bold text-slate-900 mt-1 font-mono">{safeEntries.length}</p>
+                </div>
               </div>
-            ) : (
+
+              {/* Entries Table */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden no-print">
+                <div className="px-4 py-3 border-b border-slate-100">
+                  <h3 className="font-bold text-sm sm:text-base text-slate-900">{selectedFarmerObj?.name} को दूध संकलन विवरण</h3>
+                  <p className="text-xs text-slate-500">मिति, शिफ्ट र परिमाण अनुसार प्रत्येक इन्ट्री</p>
+                </div>
+                {safeEntries.length === 0 ? (
+                  <div className="p-12 text-center text-slate-400"><p className="text-sm">कुनै अभिलेख फेला परेन।</p></div>
+                ) : (
               <>
                 {/* Mobile Entry Cards (< md) */}
                 <div className="md:hidden divide-y divide-slate-100">
@@ -1169,9 +1221,9 @@ function RecordsContent() {
                   <table className="w-full text-left text-sm">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        <th className="py-3 px-4 w-10 text-center">#</th>
                         <th className="py-3 px-4">मिति (Date)</th>
                         <th className="py-3 px-4">शिफ्ट</th>
-                        <th className="py-3 px-4">किसान (Farmer)</th>
                         <th className="py-3 px-4 text-right">परिमाण (L)</th>
                         <th className="py-3 px-4 text-right">दर (Rate)</th>
                         <th className="py-3 px-4 text-right">जम्मा (Amount)</th>
@@ -1179,14 +1231,12 @@ function RecordsContent() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {paged.map((entry) => {
-                        const farmer = farmerOf(entry);
+                      {paged.map((entry, idx) => {
                         const isEditing = editId === entry._id;
                         return (
                           <tr key={entry._id} className="hover:bg-slate-50 transition-colors">
-                            <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
-                              {formatDate(entry.date)}
-                            </td>
+                            <td className="py-3 px-4 text-center text-xs font-mono text-slate-400 font-bold">{(page - 1) * PAGE_SIZE + idx + 1}</td>
+                            <td className="py-3 px-4 text-slate-600 whitespace-nowrap">{formatDate(entry.date)}</td>
                             <td className="py-3 px-4 whitespace-nowrap">
                               <span
                                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium capitalize ${
@@ -1199,12 +1249,7 @@ function RecordsContent() {
                                 {entry.shift === 'morning' ? 'बिहान' : 'बेलुका'}
                               </span>
                             </td>
-                            <td className="py-3 px-4">
-                              <span className="font-mono text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded mr-1.5 font-bold">
-                                {farmer?.farmerCode ?? '—'}
-                              </span>
-                              <span className="font-medium text-slate-900">{farmer?.name ?? '—'}</span>
-                            </td>
+
                             <td className="py-3 px-4 text-right font-mono font-medium text-slate-900">
                               {isEditing ? (
                                 <input
@@ -1351,6 +1396,8 @@ function RecordsContent() {
               </>
             )}
           </div>
+            </>
+          )}
         </>
       )}
 
