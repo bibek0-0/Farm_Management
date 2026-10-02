@@ -1,10 +1,34 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import MilkEntry from '@/models/MilkEntry';
+import MilkSale from '@/models/MilkSale';
 import Farmer from '@/models/Farmer';
 import { auth } from '@/lib/auth';
+import NepaliDate from 'nepali-date-converter';
 
 import { getTodayBS, subtractDaysBS } from '@/lib/nepaliDate';
+
+/** Build YYYY-MM-DD string for the 1st day of a BS month (monthIndex 0-based) */
+function bsMonthStart(year: number, monthIndex: number): string {
+  const m = String(monthIndex + 1).padStart(2, '0');
+  return `${year}-${m}-01`;
+}
+
+/** Build YYYY-MM-DD string for the last day of a BS month (monthIndex 0-based) */
+function bsMonthEnd(year: number, monthIndex: number): string {
+  for (let d = 32; d >= 28; d--) {
+    try {
+      const nd = new NepaliDate(year, monthIndex, d);
+      if (nd.getMonth() === monthIndex) {
+        const m = String(monthIndex + 1).padStart(2, '0');
+        const day = String(d).padStart(2, '0');
+        return `${year}-${m}-${day}`;
+      }
+    } catch { /* try next */ }
+  }
+  const m = String(monthIndex + 1).padStart(2, '0');
+  return `${year}-${m}-30`;
+}
 
 export async function GET() {
   try {
@@ -20,6 +44,17 @@ export async function GET() {
     const fourteenDaysAgo = subtractDaysBS(today, 14);
     const thirtyDaysAgo   = subtractDaysBS(today, 30);
     const adToday         = new Date().toISOString().split('T')[0];
+
+    // Parse current BS year & month (0-based)
+    const todayND      = new NepaliDate(today);
+    const currentYear  = todayND.getYear();
+    const currentMonth = todayND.getMonth(); // 0-indexed
+
+    // Date ranges for current BS month and year
+    const monthStart = bsMonthStart(currentYear, currentMonth);
+    const monthEnd   = bsMonthEnd(currentYear, currentMonth);
+    const yearStart  = bsMonthStart(currentYear, 0);
+    const yearEnd    = bsMonthEnd(currentYear, 11);
 
     // ─── 1. Daily Trend (last 30 days) ────────────────────────────────────────
     const dailyTrend = await MilkEntry.aggregate([
@@ -118,6 +153,56 @@ export async function GET() {
       ]),
     ]);
 
+    // ─── 5. NEW: Daily milk collection for each day of current BS month ────────
+    const monthlyDailyCollection = await MilkEntry.aggregate([
+      { $match: { date: { $gte: monthStart, $lte: monthEnd } } },
+      {
+        $group: {
+          _id:         '$date',
+          totalLiters: { $sum: '$quantityLiters' },
+          totalAmount: { $sum: '$totalAmount' },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // ─── 6. NEW: Monthly totals for each month of current BS year ─────────────
+    const yearlyMonthlyCollection = await MilkEntry.aggregate([
+      { $match: { date: { $gte: yearStart, $lte: yearEnd } } },
+      {
+        $addFields: {
+          monthStr: { $substr: ['$date', 0, 7] }, // "YYYY-MM"
+        },
+      },
+      {
+        $group: {
+          _id:         '$monthStr',
+          totalLiters: { $sum: '$quantityLiters' },
+          totalAmount: { $sum: '$totalAmount' },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // ─── 7. NEW: Daily sold milk for each day of current BS month ──────────────
+    const monthlyDailySales = await MilkSale.aggregate([
+      { $match: { date: { $gte: monthStart, $lte: monthEnd } } },
+      {
+        $group: {
+          _id:           '$date',
+          totalLiters:   { $sum: '$quantityLiters' },
+          totalAmount:   { $sum: '$totalAmount' },
+          paidAmount:    {
+            $sum: { $cond: [{ $eq: ['$paymentStatus', 'paid'] }, '$totalAmount', 0] },
+          },
+          pendingAmount: {
+            $sum: { $cond: [{ $eq: ['$paymentStatus', 'pending'] }, '$totalAmount', 0] },
+          },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
     const todayLiters = Number((todayAgg[0]?.totalLiters ?? 0).toFixed(2));
     const todayAmount = Number((todayAgg[0]?.totalAmount ?? 0).toFixed(2));
     const weeklyLiters = Number((weeklyAgg[0]?.totalLiters ?? 0).toFixed(2));
@@ -167,6 +252,12 @@ export async function GET() {
       dailyTrend,
       shiftComparison,
       topSuppliers,
+      // New analytics datasets
+      monthlyDailyCollection,
+      yearlyMonthlyCollection,
+      monthlyDailySales,
+      currentYear,
+      currentMonth,
     });
   } catch (error) {
     console.error('[GET /api/analytics]', error);

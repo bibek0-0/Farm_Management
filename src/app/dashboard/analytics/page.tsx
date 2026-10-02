@@ -25,6 +25,26 @@ interface TopSupplier {
   farmerCode: string;
 }
 
+interface DailyCollectionPoint {
+  _id: string;
+  totalLiters: number;
+  totalAmount: number;
+}
+
+interface MonthlyCollectionPoint {
+  _id: string;
+  totalLiters: number;
+  totalAmount: number;
+}
+
+interface DailySalesPoint {
+  _id: string;
+  totalLiters: number;
+  totalAmount: number;
+  paidAmount: number;
+  pendingAmount: number;
+}
+
 interface AnalyticsData {
   todayLiters: number;
   todayAmount: number;
@@ -35,6 +55,11 @@ interface AnalyticsData {
   dailyTrend: DailyTrendPoint[];
   shiftComparison: ShiftCompPoint[];
   topSuppliers: TopSupplier[];
+  monthlyDailyCollection: DailyCollectionPoint[];
+  yearlyMonthlyCollection: MonthlyCollectionPoint[];
+  monthlyDailySales: DailySalesPoint[];
+  currentYear: number;
+  currentMonth: number;
 }
 
 function formatRs(amount: number) {
@@ -78,7 +103,7 @@ export default function AnalyticsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Analytics & Insights</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Last 30 days of milk collection data</p>
+          <p className="text-sm text-slate-500 mt-0.5">Year-long milk collection &amp; sales overview</p>
         </div>
         <button
           onClick={fetchData}
@@ -133,6 +158,11 @@ export default function AnalyticsPage() {
           dailyTrend={data.dailyTrend ?? []}
           shiftComparison={data.shiftComparison ?? []}
           topSuppliers={data.topSuppliers ?? []}
+          monthlyDailyCollection={data.monthlyDailyCollection ?? []}
+          yearlyMonthlyCollection={data.yearlyMonthlyCollection ?? []}
+          monthlyDailySales={data.monthlyDailySales ?? []}
+          currentYear={data.currentYear ?? new Date().getFullYear()}
+          currentMonth={data.currentMonth ?? 0}
         />
       )}
 
