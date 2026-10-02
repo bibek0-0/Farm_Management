@@ -126,23 +126,6 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {/* Summary stat pills */}
-      {!loading && data && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: "Today's Milk", value: `${(data.todayLiters ?? 0).toFixed(2)} L` },
-            { label: "Today's Payout", value: formatRs(data.todayAmount ?? 0) },
-            { label: '7-Day Milk', value: `${(data.weeklyLiters ?? 0).toFixed(2)} L` },
-            { label: '7-Day Payout', value: formatRs(data.weeklyAmount ?? 0) },
-          ].map(({ label, value }) => (
-            <div key={label} className="bg-white rounded-xl border border-slate-200 px-4 py-3 shadow-sm">
-              <p className="text-xs text-slate-500 uppercase tracking-wide">{label}</p>
-              <p className="text-base font-bold text-slate-900 mt-0.5">{value}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
       {/* Loading skeletons */}
       {loading && (
         <div className="space-y-4">
