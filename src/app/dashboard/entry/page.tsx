@@ -1020,7 +1020,7 @@ export default function OnePageGridEntry() {
         setPendingCount(newPending);
         setSavedMessage({
           type: 'success',
-          text: `📴 ${toSave.length} इन्ट्री अफलाइनमा सुरक्षित! इन्टरनेट आएपछि स्वतः सिंक हुनेछ। (${toSave.length} entries saved offline — will sync when online)`,
+          text: `${toSave.length} इन्ट्री अफलाइनमा सुरक्षित! इन्टरनेट आएपछि स्वतः सिंक हुनेछ। (${toSave.length} entries saved offline — will sync when online)`,
         });
         await loadExistingEntries();
       } catch (e: unknown) {
@@ -1432,7 +1432,7 @@ export default function OnePageGridEntry() {
       {selectedDate > getTodayBS() && (
         <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs sm:text-sm font-semibold shadow-2xs">
           <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-          <span>⚠️ भोलि वा भविष्यको मितिमा दूधको विवरण इन्ट्री गर्न मिल्दैन (Future date entries are not allowed).</span>
+          <span>⚠️भोलि वा भविष्यको मितिमा दूधको विवरण इन्ट्री गर्न मिल्दैन (Future date entries are not allowed).</span>
         </div>
       )}
 

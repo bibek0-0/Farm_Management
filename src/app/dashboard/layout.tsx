@@ -332,14 +332,6 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {/* ── Offline / Sync banner ── */}
-        {!isOnline && (
-          <div className="sticky top-0 lg:top-0 z-10 flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-xs font-semibold shadow-md no-print">
-            <WifiOff className="w-3.5 h-3.5 flex-shrink-0 animate-pulse" />
-            <span>अफलाइन मोड — दूध इन्ट्री स्थानीय रूपमा सुरक्षित हुनेछ र इन्टरनेट आएपछि स्वतः समन्वय हुनेछ।</span>
-            <span className="opacity-75 ml-1">(Offline — entries saved locally, will auto-sync when online)</span>
-          </div>
-        )}
 
         {/* Sync-complete banner (auto-hides after 5 s) */}
         {isOnline && syncedCount !== null && (
