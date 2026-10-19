@@ -17,8 +17,12 @@ import {
   ChevronRight,
   Crown,
   ShieldCheck,
+  Wifi,
+  WifiOff,
+  RefreshCw,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import ServiceWorkerRegistrar from '@/components/ServiceWorkerRegistrar';
 
 const navLinks = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -243,9 +247,48 @@ function CurrentPageTitle() {
 
 function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const [syncedCount, setSyncedCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    // Initialize with current browser state
+    setIsOnline(navigator.onLine);
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      // Attempt manual sync in case Background Sync API isn't available
+      import('@/lib/offlineDb').then(({ manualSync }) => {
+        manualSync().then(({ synced }) => {
+          if (synced > 0) setSyncedCount(synced);
+        });
+      });
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      setSyncedCount(null);
+    };
+
+    // Listen for SW sync-complete events
+    const handleSWSync = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.count > 0) setSyncedCount(detail.count);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('sw-sync-complete', handleSWSync);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('sw-sync-complete', handleSWSync);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
+      {/* Register service worker (invisible) */}
+      <ServiceWorkerRegistrar />
+
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex flex-col w-60 flex-shrink-0 bg-white border-r border-slate-200 fixed inset-y-0 left-0 z-30 no-print">
         <DesktopSidebar />
@@ -279,9 +322,35 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
             <CurrentPageTitle />
           </div>
 
-          {/* Spacer to centre the title */}
-          <div className="w-10" />
+          {/* Connectivity badge on mobile header */}
+          <div className="w-10 flex items-center justify-center" aria-label={isOnline ? 'Online' : 'Offline'}>
+            {isOnline ? (
+              <Wifi className="w-4 h-4 text-green-600" />
+            ) : (
+              <WifiOff className="w-4 h-4 text-red-500 animate-pulse" />
+            )}
+          </div>
         </header>
+
+        {/* ── Offline / Sync banner ── */}
+        {!isOnline && (
+          <div className="sticky top-0 lg:top-0 z-10 flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-xs font-semibold shadow-md no-print">
+            <WifiOff className="w-3.5 h-3.5 flex-shrink-0 animate-pulse" />
+            <span>अफलाइन मोड — दूध इन्ट्री स्थानीय रूपमा सुरक्षित हुनेछ र इन्टरनेट आएपछि स्वतः समन्वय हुनेछ।</span>
+            <span className="opacity-75 ml-1">(Offline — entries saved locally, will auto-sync when online)</span>
+          </div>
+        )}
+
+        {/* Sync-complete banner (auto-hides after 5 s) */}
+        {isOnline && syncedCount !== null && (
+          <div
+            className="sticky top-0 lg:top-0 z-10 flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-xs font-semibold shadow-md no-print cursor-pointer"
+            onClick={() => setSyncedCount(null)}
+          >
+            <RefreshCw className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>✓ {syncedCount} अफलाइन इन्ट्री सफलतापूर्वक समन्वय भयो! ({syncedCount} offline entries synced successfully)</span>
+          </div>
+        )}
 
         <main
           id="dashboard-main"

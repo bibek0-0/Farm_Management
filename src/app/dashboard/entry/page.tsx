@@ -24,6 +24,8 @@ import {
   Filter,
   ChevronDown,
   ChevronUp,
+  WifiOff,
+  CloudUpload,
 } from 'lucide-react';
 import NepaliDatePicker from '@/components/NepaliDatePicker';
 import { getTodayBS } from '@/lib/nepaliDate';
@@ -32,6 +34,14 @@ import {
   DEFAULT_QUALITY_SETTINGS,
   getStoredQualitySettings,
   saveStoredQualitySettings,
+  savePendingEntry,
+  removePendingEntry,
+  getPendingEntriesForDateShift,
+  countPendingEntries,
+  cacheFarmers,
+  getCachedFarmers,
+  registerBackgroundSync,
+  manualSync,
 } from '@/lib/offlineDb';
 
 interface IFarmer {
@@ -110,6 +120,10 @@ export default function OnePageGridEntry() {
   // Entry Mode: 'collection' (दूध संकलन) vs 'sales' (दूध बिक्री)
   const [entryMode, setEntryMode] = useState<'collection' | 'sales'>('collection');
 
+  // ─── Offline state ───────────────────────────────────────────────────────
+  const [isOnline, setIsOnline] = useState(true);
+  const [pendingCount, setPendingCount] = useState(0);
+
   // Sales state & handlers
   const [sales, setSales] = useState<ISale[]>([]);
   const [loadingSales, setLoadingSales] = useState(false);
@@ -182,15 +196,87 @@ export default function OnePageGridEntry() {
     });
   };
 
+  // ─── Online / Offline detection ─────────────────────────────────────────
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+
+    const refreshPending = async () => {
+      try {
+        const count = await countPendingEntries();
+        setPendingCount(count);
+      } catch { /* ignore */ }
+    };
+
+    const handleOnline = async () => {
+      setIsOnline(true);
+      // Try background sync registration first
+      const syncRegistered = await registerBackgroundSync();
+      if (!syncRegistered) {
+        // Fallback: manual sync
+        const { synced } = await manualSync();
+        if (synced > 0) {
+          setSavedMessage({
+            type: 'success',
+            text: `✓ ${synced} अफलाइन इन्ट्री सफलतापूर्वक सर्भरमा सिंक भयो! (${synced} offline entries synced)`,
+          });
+          setTimeout(() => setSavedMessage(null), 5000);
+          await refreshPending();
+          await loadExistingEntries();
+        }
+      }
+    };
+    const handleOffline = () => setIsOnline(false);
+
+    // Listen for sw-sync-complete event (fired by ServiceWorkerRegistrar)
+    const handleSWSync = async (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.count > 0) {
+        setSavedMessage({
+          type: 'success',
+          text: `✓ ${detail.count} अफलाइन इन्ट्री सफलतापूर्वक सिंक भयो! (${detail.count} entries synced from background)`,
+        });
+        setTimeout(() => setSavedMessage(null), 5000);
+        await refreshPending();
+        await loadExistingEntries();
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('sw-sync-complete', handleSWSync);
+
+    // Initial pending count
+    refreshPending();
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('sw-sync-complete', handleSWSync);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // 2. Fetch active farmers sorted by farmerCode (ID)
   useEffect(() => {
     async function fetchFarmers() {
       setLoadingFarmers(true);
       try {
-        const res = await fetch('/api/farmers?active=true');
-        if (!res.ok) throw new Error('Failed to fetch farmers');
-        const data = await res.json();
-        const list: IFarmer[] = Array.isArray(data) ? data : data?.farmers || [];
+        let list: IFarmer[] = [];
+        if (navigator.onLine) {
+          const res = await fetch('/api/farmers?active=true');
+          if (!res.ok) throw new Error('Failed to fetch farmers');
+          const data = await res.json();
+          list = Array.isArray(data) ? data : data?.farmers || [];
+          // Cache farmers for offline use
+          cacheFarmers(
+            list.map((f) => ({ ...f, cachedAt: Date.now() }))
+          ).catch(() => {});
+        } else {
+          // Offline — load from IndexedDB cache
+          const cached = await getCachedFarmers();
+          list = cached as IFarmer[];
+        }
+
         // Sort strictly by farmer ID/code numerically (e.g., F-01, F-02, F-10, etc.)
         const sorted = list.sort((a, b) =>
           (a.farmerCode || '').localeCompare(b.farmerCode || '', undefined, { numeric: true })
@@ -211,6 +297,21 @@ export default function OnePageGridEntry() {
         setEntries(init);
       } catch (err) {
         console.error('Error loading farmers:', err);
+        // Last resort — try IDB cache
+        try {
+          const cached = await getCachedFarmers();
+          if (cached.length > 0) {
+            const sorted = cached.sort((a, b) =>
+              (a.farmerCode || '').localeCompare(b.farmerCode || '', undefined, { numeric: true })
+            );
+            setFarmers(sorted as IFarmer[]);
+            const init: Record<string, EntryRow> = {};
+            sorted.forEach((f) => {
+              init[f._id] = { quantity: '', fat: '', snf: '', rate: String(f.defaultRate ?? 0), isCustomRate: false };
+            });
+            setEntries(init);
+          }
+        } catch { /* give up */ }
       } finally {
         setLoadingFarmers(false);
       }
@@ -223,10 +324,39 @@ export default function OnePageGridEntry() {
     if (farmers.length === 0) return;
     setLoadingEntries(true);
     try {
-      const res = await fetch(`/api/entries?startDate=${selectedDate}&endDate=${selectedDate}&shift=${selectedShift}`);
-      if (!res.ok) throw new Error('Failed to load existing entries');
-      const data = await res.json();
-      const list: ExistingEntry[] = Array.isArray(data) ? data : data?.entries || [];
+      let list: ExistingEntry[] = [];
+
+      if (navigator.onLine) {
+        const res = await fetch(`/api/entries?startDate=${selectedDate}&endDate=${selectedDate}&shift=${selectedShift}`);
+        if (!res.ok) throw new Error('Failed to load existing entries');
+        const data = await res.json();
+        list = Array.isArray(data) ? data : data?.entries || [];
+      }
+
+      // Always merge pending IDB entries on top (offline or online)
+      try {
+        const pending = await getPendingEntriesForDateShift(selectedDate, selectedShift);
+        pending.forEach((p) => {
+          // Only include if not already returned from server
+          const alreadyOnServer = list.some((e) => {
+            const fid = typeof e.farmerId === 'string' ? e.farmerId :
+              (e.farmerId as { _id?: string })?._id ||
+              (typeof e.farmer === 'string' ? e.farmer : (e.farmer as { _id?: string })?._id) || '';
+            return fid === p.farmerId;
+          });
+          if (!alreadyOnServer) {
+            list.push({
+              _id: `local-${p.localId}`,
+              farmerId: p.farmerId,
+              quantityLiters: p.quantityLiters,
+              ratePerLiter: p.ratePerLiter,
+              fat: p.fat ?? null,
+              snf: p.snf ?? null,
+            } as ExistingEntry);
+          }
+        });
+        setPendingCount(pending.length);
+      } catch { /* ignore IDB errors */ }
 
       const getFid = (e: ExistingEntry): string => {
         if (typeof e.farmerId === 'string') return e.farmerId;
@@ -367,6 +497,40 @@ export default function OnePageGridEntry() {
         setSavingFarmerIds((prev) => new Set(prev).add(farmerId));
         setGlobalSaveStatus('saving');
 
+        // ── Offline path: save to IndexedDB ────────────────────────────────
+        if (!navigator.onLine) {
+          try {
+            await savePendingEntry({
+              farmerId,
+              farmerCode: farmer.farmerCode,
+              farmerName: farmer.name,
+              date: selectedDate,
+              shift: selectedShift,
+              quantityLiters: qty,
+              ratePerLiter: effectiveRate,
+              totalAmount: qty * effectiveRate,
+              fat: !isNaN(fatNum) && fatNum > 0 ? fatNum : null,
+              snf: !isNaN(snfNum) && snfNum > 0 ? snfNum : null,
+            });
+            setExistingIds((prev) => {
+              const next = new Set(prev);
+              next.add(farmerId);
+              existingIdsRef.current = next;
+              return next;
+            });
+            setGlobalSaveStatus('saved');
+            // Update pending count
+            countPendingEntries().then(setPendingCount).catch(() => {});
+          } catch (e) {
+            console.error('[Offline] Failed to save to IDB:', e);
+            setGlobalSaveStatus('error');
+          } finally {
+            setSavingFarmerIds((prev) => { const next = new Set(prev); next.delete(farmerId); return next; });
+          }
+          return;
+        }
+
+        // ── Online path: save to server ─────────────────────────────────────
         try {
           const res = await fetch('/api/entries/bulk', {
             method: 'POST',
@@ -401,8 +565,29 @@ export default function OnePageGridEntry() {
           });
           setGlobalSaveStatus('saved');
         } catch (e: unknown) {
-          console.error('Auto-save error for farmer', farmer.farmerCode, e);
-          setGlobalSaveStatus('error');
+          // Network error while nominally online — fall back to IDB
+          if (!navigator.onLine || (e instanceof TypeError && e.message.includes('fetch'))) {
+            try {
+              await savePendingEntry({
+                farmerId,
+                farmerCode: farmer.farmerCode,
+                farmerName: farmer.name,
+                date: selectedDate,
+                shift: selectedShift,
+                quantityLiters: qty,
+                ratePerLiter: effectiveRate,
+                totalAmount: qty * effectiveRate,
+                fat: !isNaN(fatNum) && fatNum > 0 ? fatNum : null,
+                snf: !isNaN(snfNum) && snfNum > 0 ? snfNum : null,
+              });
+              setExistingIds((prev) => { const next = new Set(prev); next.add(farmerId); existingIdsRef.current = next; return next; });
+              setGlobalSaveStatus('saved');
+              countPendingEntries().then(setPendingCount).catch(() => {});
+            } catch { setGlobalSaveStatus('error'); }
+          } else {
+            console.error('Auto-save error for farmer', farmer.farmerCode, e);
+            setGlobalSaveStatus('error');
+          }
         } finally {
           setSavingFarmerIds((prev) => {
             const next = new Set(prev);
@@ -411,13 +596,17 @@ export default function OnePageGridEntry() {
           });
         }
       } else if (existingIdsRef.current.has(farmerId)) {
-        // Quantity cleared back to 0/empty, remove entry from DB
+        // Quantity cleared back to 0/empty
         setSavingFarmerIds((prev) => new Set(prev).add(farmerId));
         try {
-          await fetch(
-            `/api/entries?farmerId=${farmerId}&date=${selectedDate}&shift=${selectedShift}`,
-            { method: 'DELETE' }
-          );
+          if (navigator.onLine) {
+            await fetch(
+              `/api/entries?farmerId=${farmerId}&date=${selectedDate}&shift=${selectedShift}`,
+              { method: 'DELETE' }
+            );
+          }
+          // Also remove from IDB if it was pending
+          await removePendingEntry(farmerId, selectedDate, selectedShift).catch(() => {});
           setExistingIds((prev) => {
             const next = new Set(prev);
             next.delete(farmerId);
@@ -425,6 +614,7 @@ export default function OnePageGridEntry() {
             return next;
           });
           setGlobalSaveStatus('saved');
+          countPendingEntries().then(setPendingCount).catch(() => {});
         } catch (e) {
           console.error('Failed to delete cleared entry', e);
         } finally {
@@ -807,6 +997,42 @@ export default function OnePageGridEntry() {
 
     setSaving(true);
     setSavedMessage(null);
+
+    // ── Offline bulk save → IndexedDB ─────────────────────────────────────
+    if (!navigator.onLine) {
+      try {
+        for (const entry of toSave) {
+          const f = farmers.find((f) => f._id === entry.farmerId);
+          await savePendingEntry({
+            farmerId: entry.farmerId,
+            farmerCode: f?.farmerCode,
+            farmerName: f?.name,
+            date: entry.date,
+            shift: entry.shift,
+            quantityLiters: entry.quantityLiters,
+            ratePerLiter: entry.ratePerLiter,
+            totalAmount: entry.quantityLiters * entry.ratePerLiter,
+            fat: entry.fat ?? null,
+            snf: entry.snf ?? null,
+          });
+        }
+        const newPending = await countPendingEntries();
+        setPendingCount(newPending);
+        setSavedMessage({
+          type: 'success',
+          text: `📴 ${toSave.length} इन्ट्री अफलाइनमा सुरक्षित! इन्टरनेट आएपछि स्वतः सिंक हुनेछ। (${toSave.length} entries saved offline — will sync when online)`,
+        });
+        await loadExistingEntries();
+      } catch (e: unknown) {
+        setSavedMessage({ type: 'error', text: e instanceof Error ? e.message : 'Failed to save entries offline.' });
+      } finally {
+        setSaving(false);
+        setTimeout(() => setSavedMessage(null), 6000);
+      }
+      return;
+    }
+
+    // ── Online bulk save → server ─────────────────────────────────────────
     try {
       const res = await fetch('/api/entries/bulk', {
         method: 'POST',
@@ -851,10 +1077,38 @@ export default function OnePageGridEntry() {
   });
 
   const progressPercentage = farmers.length > 0 ? Math.round((farmersEntered / farmers.length) * 100) : 0;
-  const pendingCount = farmers.length - farmersEntered;
+  const notEnteredCount = farmers.length - farmersEntered;
 
   return (
     <div className="space-y-3 max-w-4xl mx-auto pb-24 sm:pb-8">
+      {/* ─── Offline Notice Banner ─────────────────────────────────────── */}
+      {!isOnline && (
+        <div className="flex items-start gap-2.5 px-3.5 py-3 bg-red-50 border border-red-200 rounded-xl text-xs font-medium text-red-800 shadow-xs">
+          <WifiOff className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5 animate-pulse" />
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-red-900 mb-0.5">अफलाइन मोड (Offline Mode)</p>
+            <p>इन्टरनेट छैन। दूध इन्ट्री स्थानीय रूपमा सुरक्षित हुनेछ र इन्टरनेट फर्केपछि स्वतः सर्भरमा पठाइनेछ।</p>
+            <p className="opacity-70 mt-0.5">No internet. Milk entries will be saved locally and auto-synced when connection returns.</p>
+          </div>
+          {pendingCount > 0 && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-700 bg-red-100 border border-red-300 px-2 py-0.5 rounded-full flex-shrink-0">
+              <CloudUpload className="w-3 h-3" />
+              {pendingCount} pending
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Pending sync badge (online but items waiting) */}
+      {isOnline && pendingCount > 0 && (
+        <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs font-medium text-amber-800 shadow-xs">
+          <CloudUpload className="w-4 h-4 text-amber-600 flex-shrink-0" />
+          <span className="flex-1">
+            <strong>{pendingCount}</strong> इन्ट्री सिंकिँदैछ... ({pendingCount} entries syncing...)
+          </span>
+        </div>
+      )}
+
       {/* MODE SWITCHER: दूध संकलन (Collection) vs दूध बिक्री (Sell Milk) */}
       {/* MODE SWITCHER: दूध संकलन (Collection) vs दूध बिक्री (Sell Milk) */}
       <div className="bg-white p-1.5 sm:p-2 rounded-2xl border border-slate-200 shadow-2xs w-full max-w-full">
@@ -1114,7 +1368,7 @@ export default function OnePageGridEntry() {
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  Pending ({pendingCount})
+                  Pending ({notEnteredCount})
                 </button>
                 <button
                   type="button"
